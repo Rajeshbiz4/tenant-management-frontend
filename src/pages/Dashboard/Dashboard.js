@@ -177,7 +177,7 @@ function Dashboard() {
               <Typography variant="h6" gutterBottom>
                 Collection Overview
               </Typography>
-              <ResponsiveContainer width="100%" height={300} width={500}>
+              <ResponsiveContainer width="100%" height={300}>
                 <BarChart data={chartData}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="name" />
