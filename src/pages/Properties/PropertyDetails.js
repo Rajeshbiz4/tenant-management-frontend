@@ -35,6 +35,7 @@ import {
 } from '@mui/icons-material';
 import { useFormik } from 'formik';
 import * as Yup from 'yup';
+import { format } from 'date-fns';
 import { getProperty } from '../../store/slices/propertySlice';
 import {
   createTenant,
@@ -159,11 +160,11 @@ function PropertyDetails() {
     label: `${tabConfig.find((t) => t.id === tab)?.label || 'Payment'} #${idx + 1}`,
     amount:
       tab === 'electric'
-        ? currentProperty.lightBill || 0
+        ? currentProperty.electricity?.lastUnit * currentProperty.electricity?.unitRate || 0
         : tab === 'maintenance'
-        ? currentProperty.maintenance || 0
-        : currentProperty.monthlyRent,
-    date: new Date(Date.now() - idx * 30 * 24 * 60 * 60 * 1000).toLocaleDateString(),
+        ? currentProperty.rent?.maintenance || 0
+        : currentProperty.rent?.amount || 0,
+    date: format(new Date(Date.now() - idx * 30 * 24 * 60 * 60 * 1000), 'dd MMMM yyyy'),
     status:
       tab === 'electric'
         ? tenant?.lightBillStatus
@@ -181,7 +182,7 @@ function PropertyDetails() {
         {currentProperty.location}
       </Typography>
       <Typography variant="subtitle1" color="text.secondary" mb={3}>
-        Shop #{currentProperty._id?.slice(-4)} · {tenant ? 'Active tenancy' : 'Vacant'}
+        Shop #{currentProperty._id?.slice(-4)} · {tenant ? 'Occupied' : 'Vacant'}
       </Typography>
 
       <Grid container spacing={3}>
@@ -197,19 +198,21 @@ function PropertyDetails() {
                   <Typography variant="caption" color="text.secondary">
                     Monthly Rent
                   </Typography>
-                  <Typography variant="h5">₹{currentProperty.monthlyRent}</Typography>
+                  <Typography variant="h5">₹{currentProperty.rent?.amount || 0}</Typography>
                 </Grid>
                 <Grid item xs={6}>
                   <Typography variant="caption" color="text.secondary">
                     Maintenance
                   </Typography>
-                  <Typography variant="h5">₹{currentProperty.maintenance || 0}</Typography>
+                  <Typography variant="h5">₹{currentProperty.rent?.maintenance || 0}</Typography>
                 </Grid>
                 <Grid item xs={6}>
                   <Typography variant="caption" color="text.secondary">
                     Light Bill
                   </Typography>
-                  <Typography variant="h5">₹{currentProperty.lightBill || 0}</Typography>
+                  <Typography variant="h5">
+                    ₹{currentProperty.electricity?.lastUnit * currentProperty.electricity?.unitRate || 0}
+                  </Typography>
                 </Grid>
                 <Grid item xs={6}>
                   <Typography variant="caption" color="text.secondary">
@@ -217,10 +220,22 @@ function PropertyDetails() {
                   </Typography>
                   <Typography variant="h6">{tenant ? 'Occupied' : 'Vacant'}</Typography>
                 </Grid>
+                <Grid item xs={12}>
+                  <Typography variant="caption" color="text.secondary">
+                    Agreement
+                  </Typography>
+                  <Typography variant="body1">
+                    {currentProperty.agreement?.startDate
+                      ? format(new Date(currentProperty.agreement.startDate), 'dd MMMM yyyy')
+                      : '-'}{' '}
+                    (Months: {currentProperty.agreement?.months || 0})
+                  </Typography>
+                </Grid>
               </Grid>
             </CardContent>
           </Card>
         </Grid>
+
         <Grid item xs={12} md={5}>
           <Card>
             <CardContent>
@@ -241,7 +256,7 @@ function PropertyDetails() {
                     {tenant.email} · {tenant.phone}
                   </Typography>
                   <Typography variant="body2" color="text.secondary" mt={1}>
-                    Start date: {tenant.startDate ? new Date(tenant.startDate).toLocaleDateString() : '-'}
+                    Start date: {tenant.startDate ? format(new Date(tenant.startDate), 'dd MMMM yyyy') : '-'}
                   </Typography>
                   <Stack direction="row" spacing={1} mt={3}>
                     <Chip
@@ -407,5 +422,3 @@ function PropertyDetails() {
 }
 
 export default PropertyDetails;
-
-

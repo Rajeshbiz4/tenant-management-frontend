@@ -8,18 +8,18 @@ import {
   Chip,
   CircularProgress,
   Grid,
-  List,
-  ListItem,
-  ListItemAvatar,
-  ListItemText,
   Stack,
+  Typography,
+} from '@mui/material';
+import {
   Table,
   TableBody,
   TableCell,
+  TableContainer,
   TableHead,
   TableRow,
-  Typography,
 } from '@mui/material';
+
 import {
   Home as HomeIcon,
   People as PeopleIcon,
@@ -27,10 +27,10 @@ import {
   Payments as PaymentsIcon,
   Event as EventIcon,
 } from '@mui/icons-material';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { fetchOverview } from '../../store/slices/statsSlice';
 import { fetchProperties } from '../../store/slices/propertySlice';
 import { fetchTenants } from '../../store/slices/tenantSlice';
+import OutstandingPaymentsTable from './outStanding';
 
 function Dashboard() {
   const dispatch = useDispatch();
@@ -45,69 +45,38 @@ function Dashboard() {
   }, [dispatch]);
 
   const aggregate = useMemo(() => {
-    const totalRent = properties.reduce((sum, property) => sum + (property.monthlyRent || 0), 0);
-    const pendingRentCount = tenants.filter((tenant) => tenant.rentStatus !== 'paid').length;
-    const pendingLight = tenants.filter((tenant) => tenant.lightBillStatus !== 'paid').length;
-    const pendingMaintenance = tenants.filter((tenant) => tenant.maintenanceStatus !== 'paid').length;
-    return { totalRent, pendingRentCount, pendingLight, pendingMaintenance };
-  }, [properties, tenants]);
-
-  const rentCollected = Math.max(aggregate.totalRent - (overview?.pendingRent || 0), 0);
-
-  const chartData = overview
-    ? [
-        { name: 'Rent', Collected: rentCollected, Pending: overview.pendingRent },
-        { name: 'Maintenance', Collected: aggregate.totalRent * 0.1, Pending: overview.pendingMaintenance },
-        { name: 'Electricity', Collected: aggregate.totalRent * 0.05, Pending: overview.pendingLightBill },
-      ]
-    : [];
-
-  const upcomingDueDates = useMemo(() => {
-    const today = new Date();
-    return properties
-      .map((property) => {
-        const start = property.tenant?.startDate ? new Date(property.tenant.startDate) : new Date(property.createdAt || today);
-        const dueDate = new Date(start);
-        while (dueDate <= today) {
-          dueDate.setMonth(dueDate.getMonth() + 1);
-        }
-        return {
-          id: property._id,
-          shop: property.location,
-          tenant: property.tenant?.name || 'Vacant',
-          amount: property.monthlyRent || 0,
-          status: property.tenant?.rentStatus || 'pending',
-          dueDate,
-        };
-      })
-      .sort((a, b) => a.dueDate - b.dueDate)
-      .slice(0, 5);
+    const totalRent = properties.reduce(
+      (sum, property) => sum + (property.monthlyRent || 0),
+      0
+    );
+    return { totalRent };
   }, [properties]);
 
-  const tenantSnapshot = useMemo(
-    () =>
-      tenants.slice(0, 6).map((tenant) => ({
-        name: tenant.name,
-        property:
-          tenant.propertyId && tenant.propertyId.location
-            ? `${tenant.propertyId.propertyType} • ${tenant.propertyId.location}`
-            : 'Unassigned',
-        rentStatus: tenant.rentStatus || 'pending',
-        electricStatus: tenant.lightBillStatus || 'pending',
-        maintStatus: tenant.maintenanceStatus || 'pending',
-      })),
-    [tenants]
+  const rentCollected = Math.max(
+    aggregate.totalRent - (overview?.pendingRent || 0),
+    0
   );
+
+  const overdueRentCurrentYear = useMemo(() => {
+    const currentYear = new Date().getFullYear();
+    return tenants
+      .filter((t) => {
+        const start = t.startDate ? new Date(t.startDate) : new Date();
+        const endOfYear = new Date(currentYear, 11, 31);
+        return t.rentStatus !== 'paid' && start <= endOfYear;
+      })
+      .reduce((sum, t) => sum + (t.monthlyRent || 0), 0);
+  }, [tenants]);
 
   if (loading) {
     return (
-      <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
+      <Box display="flex" justifyContent="center" minHeight="400px">
         <CircularProgress />
       </Box>
     );
   }
 
-  const currency = (value = 0) => `₹${(value || 0).toLocaleString()}`;
+  const currency = (value = 0) => `₹${value.toLocaleString()}`;
 
   const summaryCards = [
     {
@@ -115,53 +84,49 @@ function Dashboard() {
       value: overview?.totalProperties || 0,
       helper: 'Registered units',
       icon: <HomeIcon />,
+      color: 'primary.main',
     },
     {
       title: 'Active Tenants',
       value: overview?.totalTenants || tenants.length,
       helper: 'Contracts running',
       icon: <PeopleIcon />,
+      color: 'secondary.main',
     },
     {
       title: 'Rent Collected',
       value: currency(rentCollected),
-      helper: `Pending ${currency(overview?.pendingRent)}`,
+      helper: 'Collected this year',
       icon: <PaymentsIcon />,
+      color: 'success.main',
     },
     {
-      title: 'Invoices Due',
-      value: aggregate.pendingRentCount,
-      helper: 'Need follow-up',
+      title: 'Overdue Rent',
+      value: currency(overdueRentCurrentYear),
+      helper: 'Pending this year',
       icon: <ElectricIcon />,
+      color: 'error.main',
     },
   ];
 
   return (
     <Stack spacing={4}>
-      {/* <Box>
-        <Typography variant="h4" gutterBottom>
-          Dashboard
-        </Typography>
-        <Typography variant="subtitle1" color="text.secondary">
-          Quick insight into properties, tenants, and rent statuses.
-        </Typography>
-      </Box> */}
-
-      <Grid container spacing={3}>
+      {/* Summary Cards */}
+      <Grid container spacing={3} sx={{ color: '#fff' }}>
         {summaryCards.map((card) => (
-          <Grid item xs={12} sm={12} md={12} key={card.title}>
-            <Card>
+          <Grid item xs={12} sm={6} md={3} key={card.title} sx={{ color: '#fff' }}>
+            <Card sx={{ bgcolor: card.color, color: '#fff' }}>
               <CardContent>
                 <Stack direction="row" spacing={2} alignItems="center">
-                  <Avatar sx={{ bgcolor: 'primary.light', color: '#fff' }}>{card.icon}</Avatar>
+                  <Avatar sx={{ bgcolor: 'rgba(255,255,255,0.3)' }}>
+                    {card.icon}
+                  </Avatar>
                   <Box>
-                    <Typography variant="body2" color="text.secondary">
-                      {card.title}
+                    <Typography variant="body2">{card.title}</Typography>
+                    <Typography variant="h5" fontWeight="bold">
+                      {card.value}
                     </Typography>
-                    <Typography variant="h5">{card.value}</Typography>
-                    <Typography variant="caption" color="text.secondary">
-                      {card.helper}
-                    </Typography>
+                    <Typography variant="caption">{card.helper}</Typography>
                   </Box>
                 </Stack>
               </CardContent>
@@ -170,112 +135,114 @@ function Dashboard() {
         ))}
       </Grid>
 
-      <Grid container spacing={3}>
-        <Grid item xs={12} md={7}>
-          <Card>
-            <CardContent>
-              <Typography variant="h6" gutterBottom>
-                Collection Overview
-              </Typography>
-              <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={chartData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="name" />
-                  <YAxis />
-                  <Tooltip />
-                  <Legend />
-                  <Bar dataKey="Collected" fill="#2b6cb0" radius={[6, 6, 0, 0]} />
-                  <Bar dataKey="Pending" fill="#f7a727" radius={[6, 6, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
-        </Grid>
-        <Grid item xs={12} md={7}>
-          <Card>
-            <CardContent>
-              <Stack direction="row" spacing={1} alignItems="center" mb={2}>
-                <EventIcon color="primary" />
-                <Typography variant="h6">Upcoming Due Dates</Typography>
-              </Stack>
-              <List dense>
-                {upcomingDueDates.map((item) => (
-                  <ListItem key={item.id} disableGutters sx={{ mb: 1.5 }}>
-                    <ListItemAvatar>
-                      <Avatar sx={{ bgcolor: 'secondary.light', color: 'secondary.dark' }}>
-                        {item.shop.charAt(0)}
-                      </Avatar>
-                    </ListItemAvatar>
-                    <ListItemText
-                      primary={item.shop}
-                      secondary={`${item.tenant} · ${item.dueDate.toLocaleDateString()}`}
-                    />
-                    <Chip
-                      label={currency(item.amount)}
-                      color={item.status === 'paid' ? 'success' : 'warning'}
-                      size="small"
-                    />
-                  </ListItem>
-                ))}
-                {!upcomingDueDates.length && (
-                  <Typography variant="body2" color="text.secondary">
-                    No invoices scheduled for this month.
-                  </Typography>
-                )}
-              </List>
-            </CardContent>
-          </Card>
-        </Grid>
-      </Grid>
-
+      {/* Upcoming & Overdue Payments */}
       <Card>
         <CardContent>
-          <Typography variant="h6" gutterBottom>
-            Tenant Payment Snapshot
-          </Typography>
+          <Stack direction="row" spacing={1} alignItems="center" mb={2}>
+            <EventIcon color="primary" />
+            <Typography variant="h6">Upcoming & Overdue Payments</Typography>
+          </Stack>
+
           <Table size="small">
             <TableHead>
               <TableRow>
+                <TableCell>Flat / Shop</TableCell>
                 <TableCell>Tenant</TableCell>
-                <TableCell>Property</TableCell>
-                <TableCell>Rent</TableCell>
-                <TableCell>Electricity</TableCell>
-                <TableCell>Maintenance</TableCell>
+                <TableCell>Due Date</TableCell>
+                <TableCell align="center">Days</TableCell>
+                <TableCell align="right">Amount</TableCell>
+                <TableCell>Status</TableCell>
+                <TableCell>Risk</TableCell>
               </TableRow>
             </TableHead>
+
             <TableBody>
-              {tenantSnapshot.map((row) => (
-                <TableRow key={`${row.name}-${row.property}`}>
-                  <TableCell>{row.name}</TableCell>
-                  <TableCell>{row.property}</TableCell>
-                  <TableCell>
-                    <Chip
-                      label={row.rentStatus === 'paid' ? 'Paid' : 'Pending'}
-                      color={row.rentStatus === 'paid' ? 'success' : 'warning'}
-                      size="small"
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <Chip
-                      label={row.electricStatus === 'paid' ? 'Paid' : 'Pending'}
-                      color={row.electricStatus === 'paid' ? 'success' : 'warning'}
-                      size="small"
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <Chip
-                      label={row.maintStatus === 'paid' ? 'Paid' : 'Pending'}
-                      color={row.maintStatus === 'paid' ? 'success' : 'warning'}
-                      size="small"
-                    />
-                  </TableCell>
-                </TableRow>
-              ))}
-              {!tenantSnapshot.length && (
+              {properties
+                .map((property) => {
+                  const tenant = property.tenant;
+                  if (!tenant) return null;
+
+                  const start = tenant.startDate
+                    ? new Date(tenant.startDate)
+                    : new Date();
+                  const dueDate = new Date(start);
+                  const today = new Date();
+                  while (dueDate <= today) {
+                    dueDate.setMonth(dueDate.getMonth() + 1);
+                  }
+                  const diffDays = Math.ceil(
+                    (dueDate - today) / (1000 * 60 * 60 * 24)
+                  );
+                  const overdue = diffDays < 0;
+                  const risk =
+                    diffDays < 0
+                      ? 'High'
+                      : diffDays <= 5
+                      ? 'Medium'
+                      : 'Low';
+
+                  return {
+                    id: property._id,
+                    shop: property.location,
+                    tenant: tenant.name,
+                    dueDate,
+                    days: diffDays,
+                    amount: property.monthlyRent || 0,
+                    status: tenant.rentStatus || 'pending',
+                    overdue,
+                    risk,
+                  };
+                })
+                .filter(Boolean)
+                .map((item) => (
+                  <TableRow
+                    key={item.id}
+                    sx={{
+                      backgroundColor: item.overdue ? '#ffebee' : '#e8f5e9',
+                    }}
+                  >
+                    <TableCell>{item.shop}</TableCell>
+                    <TableCell>{item.tenant}</TableCell>
+                    <TableCell>{item.dueDate.toLocaleDateString()}</TableCell>
+                    <TableCell align="center">
+                      <Typography
+                        fontWeight={600}
+                        color={item.overdue ? 'error' : 'success.main'}
+                      >
+                        {item.overdue
+                          ? `${Math.abs(item.days)} Late`
+                          : `${item.days} Left`}
+                      </Typography>
+                    </TableCell>
+                    <TableCell align="right">{currency(item.amount)}</TableCell>
+                    <TableCell>
+                      <Chip
+                        label={item.status === 'paid' ? 'Paid' : 'Pending'}
+                        color={item.status === 'paid' ? 'success' : 'warning'}
+                        size="small"
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <Chip
+                        label={item.risk}
+                        color={
+                          item.risk === 'High'
+                            ? 'error'
+                            : item.risk === 'Medium'
+                            ? 'warning'
+                            : 'success'
+                        }
+                        size="small"
+                      />
+                    </TableCell>
+                  </TableRow>
+                ))}
+
+              {!properties.some((p) => p.tenant) && (
                 <TableRow>
-                  <TableCell colSpan={5}>
+                  <TableCell colSpan={7} align="center">
                     <Typography variant="body2" color="text.secondary">
-                      No tenant data available yet.
+                      No upcoming or overdue payments 🎉
                     </Typography>
                   </TableCell>
                 </TableRow>
@@ -284,9 +251,13 @@ function Dashboard() {
           </Table>
         </CardContent>
       </Card>
+
+      {/* Outstanding Payments */}
+      <Card>
+        <OutstandingPaymentsTable />
+      </Card>
     </Stack>
   );
 }
 
 export default Dashboard;
-

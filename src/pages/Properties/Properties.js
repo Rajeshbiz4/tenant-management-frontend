@@ -2,55 +2,51 @@ import React, { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import {
-  Box,
-  Typography,
-  Button,
-  Card,
-  CardContent,
-  IconButton,
-  TextField,
-  MenuItem,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  Pagination,
-  CircularProgress,
-  Chip,
-  Stack,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Tooltip,
+  Box, Typography, Button, Card, CardContent, CardActions,
+  IconButton, TextField, MenuItem, Dialog, DialogTitle,
+  DialogContent, DialogActions, Pagination, CircularProgress,
+  Chip, Stack, Tooltip, Avatar, Grid
 } from '@mui/material';
 import {
-  Add as AddIcon,
-  Edit as EditIcon,
-  Delete as DeleteIcon,
-  Visibility as ViewIcon,
-  Paid as PaidIcon,
-  Pending as PendingIcon,
+  Add as AddIcon, Edit as EditIcon, Delete as DeleteIcon,
+  Visibility as ViewIcon, Store as ShopIcon,
+  Home as FlatIcon, Terrain as PlotIcon, Home as HomeIcon
 } from '@mui/icons-material';
 import { useFormik } from 'formik';
 import * as Yup from 'yup';
+import { format } from 'date-fns';
 import {
-  fetchProperties,
-  createProperty,
-  updateProperty,
-  deleteProperty,
+  fetchProperties, createProperty, updateProperty, deleteProperty
 } from '../../store/slices/propertySlice';
 
 const validationSchema = Yup.object({
   propertyType: Yup.string().required('Property type is required'),
+  shopName: Yup.string().required('Shop name is required'),
+  shopNumber: Yup.string().required('Shop number is required'),
   area: Yup.number().positive('Area must be positive').required('Area is required'),
   location: Yup.string().required('Location is required'),
-  monthlyRent: Yup.number().positive('Rent must be positive').required('Monthly rent is required'),
-  maintenance: Yup.number().min(0, 'Maintenance must be positive').required('Maintenance is required'),
-  lightBill: Yup.number().min(0, 'Light bill must be positive'),
+  rentAmount: Yup.number().positive('Rent must be positive').required('Rent amount is required'),
+  rentDeposit: Yup.number().min(0, 'Deposit must be positive').required('Deposit is required'),
+  rentPaymentDay: Yup.number().min(1).max(31, 'Payment day must be 1-31').required('Payment day is required'),
+  electricitySubmeter: Yup.string(),
+  electricityLastUnit: Yup.number().min(0),
+  electricityUnitRate: Yup.number().min(0),
+  agreementStart: Yup.string().required('Agreement start date required'),
+  agreementMonths: Yup.number().min(0, 'Months cannot be negative'),
 });
+
+const getPropertyIcon = (type) => {
+  switch (type) {
+    case 'shop':
+      return <ShopIcon fontSize="large" color="primary" />;
+    case 'flat':
+      return <FlatIcon fontSize="large" color="secondary" />;
+    case 'plot':
+      return <PlotIcon fontSize="large" color="success" />;
+    default:
+      return <HomeIcon fontSize="large" />;
+  }
+};
 
 function Properties() {
   const dispatch = useDispatch();
@@ -69,19 +65,52 @@ function Properties() {
   const formik = useFormik({
     initialValues: {
       propertyType: '',
+      shopName: '',
+      shopNumber: '',
       area: '',
       location: '',
-      monthlyRent: '',
-      maintenance: '',
-      lightBill: '',
+      agreementStart: '',
+      agreementMonths: 0,
+      rentAmount: 0,
+      rentDeposit: 0,
+      rentPaymentDay: 1,
+      electricitySubmeter: '',
+      electricityLastUnit: 0,
+      electricityUnitRate: 0,
+      tenant: null
     },
     validationSchema,
     onSubmit: async (values) => {
+      const payload = {
+        propertyType: values.propertyType,
+        shopName: values.shopName,
+        shopNumber: values.shopNumber,
+        area: Number(values.area),
+        location: values.location,
+        agreement: {
+          startDate: values.agreementStart,
+          months: Number(values.agreementMonths),
+        },
+        rent: {
+          amount: Number(values.rentAmount),
+          deposit: Number(values.rentDeposit),
+          paymentDay: Number(values.rentPaymentDay),
+        },
+        electricity: {
+          submeterNo: values.electricitySubmeter,
+          lastUnit: Number(values.electricityLastUnit),
+          unitRate: Number(values.electricityUnitRate),
+        },
+        tenant: values.tenant || null,
+        isActive: values.tenant ? true : false
+      };
+
       if (editingProperty) {
-        await dispatch(updateProperty({ id: editingProperty._id, ...values }));
+        await dispatch(updateProperty({ id: editingProperty._id, ...payload }));
       } else {
-        await dispatch(createProperty(values));
+        await dispatch(createProperty(payload));
       }
+
       setOpen(false);
       setEditingProperty(null);
       formik.resetForm();
@@ -93,11 +122,19 @@ function Properties() {
     setEditingProperty(property);
     formik.setValues({
       propertyType: property.propertyType,
+      shopName: property.shopName,
+      shopNumber: property.shopNumber,
       area: property.area,
       location: property.location,
-      monthlyRent: property.monthlyRent,
-      maintenance: property.maintenance || 0,
-      lightBill: property.lightBill || 0,
+      agreementStart: property.agreement?.startDate || '',
+      agreementMonths: property.agreement?.months || 0,
+      rentAmount: property.rent?.amount || 0,
+      rentDeposit: property.rent?.deposit || 0,
+      rentPaymentDay: property.rent?.paymentDay || 1,
+      electricitySubmeter: property.electricity?.submeterNo || '',
+      electricityLastUnit: property.electricity?.lastUnit || 0,
+      electricityUnitRate: property.electricity?.unitRate || 0,
+      tenant: property.tenant || null,
     });
     setOpen(true);
   };
@@ -117,45 +154,32 @@ function Properties() {
 
   return (
     <Box>
+      {/* Header */}
       <Box display="flex" flexDirection={{ xs: 'column', md: 'row' }} justifyContent="space-between" gap={2} mb={3}>
         <Box>
           <Typography variant="h4">Shops</Typography>
           <Typography variant="body2" color="text.secondary">
-            Overview of every shop, rent agreement, and utility status.
+            Overview of all shops and their current status.
           </Typography>
         </Box>
-        <Button
-          variant="contained"
-          startIcon={<AddIcon />}
-          onClick={() => {
-            setEditingProperty(null);
-            formik.resetForm();
-            setOpen(true);
-          }}
-          sx={{ alignSelf: { xs: 'flex-start', md: 'center' } }}
-        >
+        <Button variant="contained" startIcon={<AddIcon />} onClick={() => { setEditingProperty(null); formik.resetForm(); setOpen(true); }}>
           Add Shop
         </Button>
       </Box>
 
+      {/* Filters */}
       <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} mb={3}>
         <TextField
           label="Search by location"
           value={search}
-          onChange={(e) => {
-            setSearch(e.target.value);
-            setPage(1);
-          }}
+          onChange={(e) => { setSearch(e.target.value); setPage(1); }}
           fullWidth
         />
         <TextField
           select
           label="Shop Type"
           value={propertyType}
-          onChange={(e) => {
-            setPropertyType(e.target.value);
-            setPage(1);
-          }}
+          onChange={(e) => { setPropertyType(e.target.value); setPage(1); }}
           sx={{ minWidth: 180 }}
         >
           <MenuItem value="">All types</MenuItem>
@@ -165,197 +189,115 @@ function Properties() {
         </TextField>
       </Stack>
 
-      {loading ? (
-        <Box display="flex" justifyContent="center" p={4}>
-          <CircularProgress />
-        </Box>
-      ) : (
-        <>
-          <Card>
-            <CardContent sx={{ p: 0 }}>
-              <TableContainer>
-                <Table>
-                  <TableHead>
-                    <TableRow>
-                      <TableCell>Shop</TableCell>
-                      <TableCell>Tenant</TableCell>
-                      <TableCell align="right">Rent</TableCell>
-                      <TableCell align="right">Electricity</TableCell>
-                      <TableCell align="right">Maintenance</TableCell>
-                      <TableCell>Status</TableCell>
-                      <TableCell align="right">Actions</TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {properties.map((property) => {
-                      const tenant = property.tenant;
-                      const statusChip = (state, label) => (
-                        <Chip
-                          label={label}
-                          color={state === 'paid' ? 'success' : tenant ? 'warning' : 'default'}
-                          size="small"
-                          icon={state === 'paid' ? <PaidIcon /> : <PendingIcon />}
-                        />
-                      );
-                      return (
-                        <TableRow key={property._id}>
-                          <TableCell>
-                            <Typography variant="subtitle2">{property.location}</Typography>
-                            <Typography variant="caption" color="text.secondary">
-                              {property.propertyType} • {property.area} sq.ft
-                            </Typography>
-                          </TableCell>
-                          <TableCell>
-                            {tenant ? (
-                              <>
-                                <Typography variant="body2">{tenant.name}</Typography>
-                                <Typography variant="caption" color="text.secondary">
-                                  {tenant.phone}
-                                </Typography>
-                              </>
-                            ) : (
-                              <Chip label="Vacant" size="small" />
-                            )}
-                          </TableCell>
-                          <TableCell align="right">₹{property.monthlyRent}</TableCell>
-                          <TableCell align="right">₹{property.lightBill || 0}</TableCell>
-                          <TableCell align="right">₹{property.maintenance || 0}</TableCell>
-                          <TableCell>
-                            <Stack direction="row" spacing={1}>
-                              {statusChip(tenant?.rentStatus, 'Rent')}
-                              {statusChip(tenant?.lightBillStatus, 'Elec')}
-                              {statusChip(tenant?.maintenanceStatus, 'Maint')}
-                            </Stack>
-                          </TableCell>
-                          <TableCell align="right">
-                            <Stack direction="row" spacing={1} justifyContent="flex-end">
-                              <Tooltip title="View detail">
-                                <IconButton size="small" onClick={() => navigate(`/properties/${property._id}`)}>
-                                  <ViewIcon fontSize="inherit" />
-                                </IconButton>
-                              </Tooltip>
-                              <Tooltip title="Edit shop">
-                                <IconButton size="small" onClick={() => handleEdit(property)}>
-                                  <EditIcon fontSize="inherit" />
-                                </IconButton>
-                              </Tooltip>
-                              <Tooltip title="Delete">
-                                <IconButton size="small" color="error" onClick={() => handleDelete(property._id)}>
-                                  <DeleteIcon fontSize="inherit" />
-                                </IconButton>
-                              </Tooltip>
-                            </Stack>
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                    {properties.length === 0 && (
-                      <TableRow>
-                        <TableCell colSpan={7} align="center">
-                          <Typography variant="body2" color="text.secondary">
-                            No shops found. Adjust filters or add a new record.
-                          </Typography>
-                        </TableCell>
-                      </TableRow>
-                    )}
-                  </TableBody>
-                </Table>
-              </TableContainer>
-            </CardContent>
-          </Card>
-          {pagination.totalPages > 1 && (
-            <Box display="flex" justifyContent="center" mt={3}>
-              <Pagination count={pagination.totalPages} page={page} onChange={(e, value) => setPage(value)} />
-            </Box>
+      {/* Cards */}
+      {loading ? <Box display="flex" justifyContent="center" p={4}><CircularProgress /></Box> : (
+        <Grid container spacing={3}>
+          {properties.length === 0 && (
+            <Grid item xs={12}>
+              <Typography align="center">No shops found.</Typography>
+            </Grid>
           )}
-        </>
+        {properties.map((property) => (
+  <Grid item xs={12} sm={6} md={4} key={property._id}>
+    <Card sx={{ 
+      boxShadow: 3, 
+      transition: 'transform 0.2s, box-shadow 0.2s', 
+      '&:hover': { transform: 'scale(1.03)', boxShadow: 6 } 
+    }}>
+      {/* Header with avatar and property info */}
+      <CardContent sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+        <Avatar sx={{ bgcolor: 'primary.light', width: 56, height: 56 }}>
+          {getPropertyIcon(property.propertyType)}
+        </Avatar>
+        <Box flex={1}>
+          <Typography variant="h6" gutterBottom>{property.shopName}</Typography>
+          <Typography variant="body2" color="text.secondary" gutterBottom>
+            {property.shopNumber} | {property.propertyType} | {property.area} sq.ft
+          </Typography>
+          <Stack direction="row" spacing={1} flexWrap="wrap" sx={{ mb: 0.5 }}>
+            <Chip label={`Rent: ₹${property.rent?.amount || 0}`} size="small" color="primary" />
+            <Chip label={`Deposit: ₹${property.rent?.deposit || 0}`} size="small" color="success" />
+            <Chip label={`Day ${property.rent?.paymentDay || 1}`} size="small" color="warning" />
+          </Stack>
+          <Typography variant="body2" color="text.secondary">
+            Agreement: {property.agreement?.startDate ? format(new Date(property.agreement.startDate), 'dd MMM yyyy') : '-'} 
+            ({property.agreement?.months || 0} months)
+          </Typography>
+          <Chip 
+            label={property.tenant ? 'Active' : 'Vacant'} 
+            color={property.tenant ? 'success' : 'default'} 
+            size="small" 
+            sx={{ mt: 1 }} 
+          />
+        </Box>
+      </CardContent>
+
+      {/* Actions */}
+      <CardActions sx={{ justifyContent: 'flex-end', pt: 0 }}>
+        <Tooltip title="View Details">
+          <IconButton size="small" onClick={() => navigate(`/properties/${property._id}`)}>
+            <ViewIcon fontSize="inherit" />
+          </IconButton>
+        </Tooltip>
+        <Tooltip title="Edit Property">
+          <IconButton size="small" onClick={() => handleEdit(property)}>
+            <EditIcon fontSize="inherit" />
+          </IconButton>
+        </Tooltip>
+        <Tooltip title="Delete Property">
+          <IconButton size="small" color="error" onClick={() => handleDelete(property._id)}>
+            <DeleteIcon fontSize="inherit" />
+          </IconButton>
+        </Tooltip>
+      </CardActions>
+    </Card>
+  </Grid>
+))}
+
+        </Grid>
       )}
 
+      {/* Pagination */}
+      {pagination.totalPages > 1 && (
+        <Box display="flex" justifyContent="center" mt={3}>
+          <Pagination count={pagination.totalPages} page={page} onChange={(e, value) => setPage(value)} />
+        </Box>
+      )}
+
+      {/* Modal */}
       <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
         <DialogTitle>{editingProperty ? 'Edit Property' : 'Add Property'}</DialogTitle>
         <form onSubmit={formik.handleSubmit}>
           <DialogContent>
-            <TextField
-              select
-              fullWidth
-              margin="normal"
-              id="propertyType"
-              name="propertyType"
-              label="Property Type"
-              value={formik.values.propertyType}
-              onChange={formik.handleChange}
-              error={formik.touched.propertyType && Boolean(formik.errors.propertyType)}
-              helperText={formik.touched.propertyType && formik.errors.propertyType}
-            >
+            {/* Basic Info */}
+            <TextField fullWidth margin="normal" label="Shop Name" name="shopName" value={formik.values.shopName} onChange={formik.handleChange} />
+            <TextField fullWidth margin="normal" label="Shop Number" name="shopNumber" value={formik.values.shopNumber} onChange={formik.handleChange} />
+            <TextField select fullWidth margin="normal" label="Property Type" name="propertyType" value={formik.values.propertyType} onChange={formik.handleChange}>
               <MenuItem value="flat">Flat</MenuItem>
               <MenuItem value="shop">Shop</MenuItem>
               <MenuItem value="plot">Plot</MenuItem>
             </TextField>
-            <TextField
-              fullWidth
-              margin="normal"
-              id="area"
-              name="area"
-              label="Area (sq.ft)"
-              type="number"
-              value={formik.values.area}
-              onChange={formik.handleChange}
-              error={formik.touched.area && Boolean(formik.errors.area)}
-              helperText={formik.touched.area && formik.errors.area}
-            />
-            <TextField
-              fullWidth
-              margin="normal"
-              id="location"
-              name="location"
-              label="Location"
-              value={formik.values.location}
-              onChange={formik.handleChange}
-              error={formik.touched.location && Boolean(formik.errors.location)}
-              helperText={formik.touched.location && formik.errors.location}
-            />
-            <TextField
-              fullWidth
-              margin="normal"
-              id="monthlyRent"
-              name="monthlyRent"
-              label="Monthly Rent"
-              type="number"
-              value={formik.values.monthlyRent}
-              onChange={formik.handleChange}
-              error={formik.touched.monthlyRent && Boolean(formik.errors.monthlyRent)}
-              helperText={formik.touched.monthlyRent && formik.errors.monthlyRent}
-            />
-            <TextField
-              fullWidth
-              margin="normal"
-              id="maintenance"
-              name="maintenance"
-              label="Maintenance"
-              type="number"
-              value={formik.values.maintenance}
-              onChange={formik.handleChange}
-              error={formik.touched.maintenance && Boolean(formik.errors.maintenance)}
-              helperText={formik.touched.maintenance && formik.errors.maintenance}
-            />
-            <TextField
-              fullWidth
-              margin="normal"
-              id="lightBill"
-              name="lightBill"
-              label="Light Bill (Optional)"
-              type="number"
-              value={formik.values.lightBill}
-              onChange={formik.handleChange}
-              error={formik.touched.lightBill && Boolean(formik.errors.lightBill)}
-              helperText={formik.touched.lightBill && formik.errors.lightBill}
-            />
+            <TextField fullWidth margin="normal" label="Area (sq.ft)" name="area" type="number" value={formik.values.area} onChange={formik.handleChange} />
+            <TextField fullWidth margin="normal" label="Location" name="location" value={formik.values.location} onChange={formik.handleChange} />
+
+            {/* Agreement */}
+            <TextField fullWidth margin="normal" label="Agreement Start Date" name="agreementStart" type="date" InputLabelProps={{ shrink: true }} value={formik.values.agreementStart ? new Date(formik.values.agreementStart).toISOString().split('T')[0] : ''} onChange={formik.handleChange} />
+            <TextField fullWidth margin="normal" label="Agreement Months" name="agreementMonths" type="number" value={formik.values.agreementMonths} onChange={formik.handleChange} />
+
+            {/* Rent */}
+            <TextField fullWidth margin="normal" label="Rent Amount" name="rentAmount" type="number" value={formik.values.rentAmount} onChange={formik.handleChange} />
+            <TextField fullWidth margin="normal" label="Deposit" name="rentDeposit" type="number" value={formik.values.rentDeposit} onChange={formik.handleChange} />
+            <TextField fullWidth margin="normal" label="Payment Day" name="rentPaymentDay" type="number" value={formik.values.rentPaymentDay} onChange={formik.handleChange} />
+
+            {/* Electricity */}
+            <TextField fullWidth margin="normal" label="Submeter No" name="electricitySubmeter" value={formik.values.electricitySubmeter} onChange={formik.handleChange} />
+            <TextField fullWidth margin="normal" label="Last Unit" name="electricityLastUnit" type="number" value={formik.values.electricityLastUnit} onChange={formik.handleChange} />
+            <TextField fullWidth margin="normal" label="Unit Rate" name="electricityUnitRate" type="number" value={formik.values.electricityUnitRate} onChange={formik.handleChange} />
+
           </DialogContent>
           <DialogActions>
             <Button onClick={handleClose}>Cancel</Button>
-            <Button type="submit" variant="contained">
-              {editingProperty ? 'Update' : 'Create'}
-            </Button>
+            <Button type="submit" variant="contained">{editingProperty ? 'Update' : 'Create'}</Button>
           </DialogActions>
         </form>
       </Dialog>
@@ -364,4 +306,3 @@ function Properties() {
 }
 
 export default Properties;
-

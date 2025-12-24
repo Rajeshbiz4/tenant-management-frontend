@@ -28,6 +28,7 @@ const validationSchema = Yup.object({
   confirmPassword: Yup.string()
     .oneOf([Yup.ref('password')], 'Passwords must match')
     .required('Please confirm your password'),
+    propertyName: Yup.string().required('Property Name is required'),
 });
 
 function Register() {
@@ -48,6 +49,7 @@ function Register() {
       userType: 'owner',
       password: '',
       confirmPassword: '',
+      propertyName: '',   // NEW FIELD
     },
     validationSchema,
     onSubmit: (values) => {
@@ -175,6 +177,19 @@ function Register() {
               <MenuItem value="tenant">Tenant</MenuItem>
               <MenuItem value="admin">Admin</MenuItem>
             </TextField>
+
+            <TextField
+  fullWidth
+  id="propertyName"
+  name="propertyName"
+  label="Property Name"
+  margin="normal"
+  value={formik.values.propertyName}
+  onChange={formik.handleChange}
+  error={formik.touched.propertyName && Boolean(formik.errors.propertyName)}
+  helperText={formik.touched.propertyName && formik.errors.propertyName}
+/>
+
 
             {/* Password + Confirm */}
             <Box display="flex" gap={2} flexDirection={{ xs: 'column', sm: 'row' }}>

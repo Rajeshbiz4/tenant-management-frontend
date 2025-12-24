@@ -30,7 +30,10 @@ import {
   AccountCircle as AccountCircleIcon,
   NotificationsNone as NotificationsIcon,
   SettingsOutlined as SettingsIcon,
+  
 } from '@mui/icons-material';
+import PaymentIcon from '@mui/icons-material/Payment';
+import CurrencyRupeeIcon from '@mui/icons-material/CurrencyRupee';
 import { logout } from '../../store/slices/authSlice';
 
 const drawerWidth = 220;
@@ -39,7 +42,9 @@ const menuItems = [
   { text: 'Dashboard', icon: <DashboardIcon />, path: '/' },
   { text: 'Shops', icon: <HomeIcon />, path: '/properties' },
   { text: 'Tenants', icon: <PeopleIcon />, path: '/tenants' },
-  // { text: 'Reports', icon: <BarChartIcon />, path: '/statistics' },
+  //  { text: 'Reports', icon: <BarChartIcon />, path: '/statistics' },
+   { text: 'Make Payments', icon: <PaymentIcon />, path: '/payment' },
+    { text: 'Payments History', icon: <CurrencyRupeeIcon />, path: '/paymenthistory' },
 ];
 
 function Layout({ children }) {
