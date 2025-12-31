@@ -1,5 +1,6 @@
 import React, { useMemo, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
+import { useNavigate } from 'react-router-dom';
 import {
   Avatar,
   Box,
@@ -10,6 +11,7 @@ import {
   Grid,
   Stack,
   Typography,
+  Button,
 } from '@mui/material';
 import {
   Table,
@@ -26,6 +28,13 @@ import {
   ElectricBolt as ElectricIcon,
   Payments as PaymentsIcon,
   Event as EventIcon,
+  Add as AddIcon,
+  Payment as PaymentIcon,
+  History as HistoryIcon,
+  Build as BuildIcon,
+  Analytics as AnalyticsIcon,
+  Info as InfoIcon,
+  CheckCircle as CheckCircleIcon,
 } from '@mui/icons-material';
 import { fetchOverview } from '../../store/slices/statsSlice';
 import { fetchProperties } from '../../store/slices/propertySlice';
@@ -35,20 +44,33 @@ import OutstandingPaymentsTable from './outStanding';
 
 function Dashboard() {
   const dispatch = useDispatch();
+  const navigate = useNavigate();
   const { overview, loading } = useSelector((state) => state.stats);
   const { properties } = useSelector((state) => state.property);
   const { tenants } = useSelector((state) => state.tenant);
   const { payments } = useSelector((state) => state.payment);
+  const { user } = useSelector((state) => state.auth);
 
   const currentYear = new Date().getFullYear();
+  
+  // Get property name from user registration (for welcome message)
+  const propertyName = user?.propertyName 
+    ? user.propertyName.charAt(0).toUpperCase() + user.propertyName.slice(1)
+    : 'Property';
 
   useEffect(() => {
     dispatch(fetchOverview());
     dispatch(fetchProperties({ page: 1, limit: 100 }));
     dispatch(fetchTenants({ page: 1, limit: 100 }));
-    // Fetch all payments for current year to calculate accurate rent collected
-    dispatch(getPayments({ year: currentYear }));
-  }, [dispatch, currentYear]);
+  }, [dispatch]);
+
+  // Only fetch payments if user has properties
+  useEffect(() => {
+    if (properties.length > 0) {
+      // Fetch all payments for current year to calculate accurate rent collected
+      dispatch(getPayments({ year: currentYear }));
+    }
+  }, [dispatch, currentYear, properties.length]);
 
   // Calculate actual rent collected from payment records for current year
   const rentCollected = useMemo(() => {
@@ -115,9 +137,160 @@ function Dashboard() {
 
   return (
     <Stack spacing={4}>
-      {/* Summary Cards */}
-      <Grid container spacing={3} sx={{ color: '#fff' }}>
-        {summaryCards.map((card) => (
+      {/* Welcome Instructions for New Users */}
+      {properties.length === 0 && (
+        <Card sx={{ bgcolor: 'info.light', mb: 3 }}>
+          <CardContent>
+            <Stack direction="row" spacing={2} alignItems="flex-start">
+              <InfoIcon sx={{ color: 'info.main', mt: 0.5 }} />
+              <Box flex={1}>
+                <Typography variant="h6" gutterBottom fontWeight="bold">
+                  Welcome to {propertyName}!
+                </Typography>
+                <Typography variant="body1" paragraph>
+                  Get started by following these steps:
+                </Typography>
+                <Stack spacing={1.5} sx={{ mt: 2 }}>
+                  <Box display="flex" gap={2} alignItems="flex-start">
+                    <CheckCircleIcon sx={{ color: 'success.main', mt: 0.5 }} />
+                    <Box>
+                      <Typography variant="subtitle2" fontWeight="bold">
+                        Step 1: Add Your First Shop/Property
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        Click "Add Shop" to register your first property. You can add flats, shops, or plots with details like rent, maintenance, and location.
+                      </Typography>
+                    </Box>
+                  </Box>
+                  <Box display="flex" gap={2} alignItems="flex-start">
+                    <CheckCircleIcon sx={{ color: 'success.main', mt: 0.5 }} />
+                    <Box>
+                      <Typography variant="subtitle2" fontWeight="bold">
+                        Step 2: Add Tenants
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        Once you have properties, go to "Tenants" page to add tenant information and link them to your properties.
+                      </Typography>
+                    </Box>
+                  </Box>
+                  <Box display="flex" gap={2} alignItems="flex-start">
+                    <CheckCircleIcon sx={{ color: 'success.main', mt: 0.5 }} />
+                    <Box>
+                      <Typography variant="subtitle2" fontWeight="bold">
+                        Step 3: Record Payments
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        Use "Make Payment" to record rent, maintenance, and light bill payments from your tenants.
+                      </Typography>
+                    </Box>
+                  </Box>
+                  <Box display="flex" gap={2} alignItems="flex-start">
+                    <CheckCircleIcon sx={{ color: 'success.main', mt: 0.5 }} />
+                    <Box>
+                      <Typography variant="subtitle2" fontWeight="bold">
+                        Step 4: Track & Analyze
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        Monitor your income, expenses, and pending payments through the Dashboard, Payment History, and Analytics pages.
+                      </Typography>
+                    </Box>
+                  </Box>
+                </Stack>
+                <Box sx={{ mt: 3 }}>
+                  <Button
+                    variant="contained"
+                    size="large"
+                    startIcon={<AddIcon />}
+                    onClick={() => navigate('/properties')}
+                    sx={{ 
+                      bgcolor: 'primary.main',
+                      '&:hover': { bgcolor: 'primary.dark' }
+                    }}
+                  >
+                    Get Started - Add Your First Shop
+                  </Button>
+                </Box>
+              </Box>
+            </Stack>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Quick Action Buttons */}
+      {properties.length > 0 && (
+        <Card>
+          <CardContent>
+            <Typography variant="h6" gutterBottom>
+              Quick Actions
+            </Typography>
+            <Stack 
+              direction={{ xs: 'column', sm: 'row' }} 
+              spacing={2} 
+              sx={{ mt: 2 }}
+              flexWrap="wrap"
+            >
+              <Button
+                variant="contained"
+                size="large"
+                startIcon={<AddIcon />}
+                onClick={() => navigate('/properties')}
+                sx={{ 
+                  minWidth: 150,
+                  bgcolor: 'primary.main',
+                  '&:hover': { bgcolor: 'primary.dark' }
+                }}
+              >
+                Add Shop
+              </Button>
+              <Button
+                variant="contained"
+                size="large"
+                startIcon={<PaymentIcon />}
+                onClick={() => navigate('/payment')}
+                sx={{ 
+                  minWidth: 150,
+                  bgcolor: 'success.main',
+                  '&:hover': { bgcolor: 'success.dark' }
+                }}
+              >
+                Make Payment
+              </Button>
+              <Button
+                variant="outlined"
+                size="large"
+                startIcon={<HistoryIcon />}
+                onClick={() => navigate('/paymenthistory')}
+                sx={{ minWidth: 150 }}
+              >
+                Payment History
+              </Button>
+              <Button
+                variant="outlined"
+                size="large"
+                startIcon={<BuildIcon />}
+                onClick={() => navigate('/maintenance')}
+                sx={{ minWidth: 150 }}
+              >
+                Maintenance
+              </Button>
+              <Button
+                variant="outlined"
+                size="large"
+                startIcon={<AnalyticsIcon />}
+                onClick={() => navigate('/analytics')}
+                sx={{ minWidth: 150 }}
+              >
+                Analytics
+              </Button>
+            </Stack>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Summary Cards - Only show if user has properties */}
+      {properties.length > 0 && (
+        <Grid container spacing={3} sx={{ color: '#fff' }}>
+          {summaryCards.map((card) => (
           <Grid item xs={12} sm={6} md={3} key={card.title} sx={{ color: '#fff' }}>
             <Card sx={{ bgcolor: card.color, color: '#fff' }}>
               <CardContent>
@@ -137,9 +310,11 @@ function Dashboard() {
             </Card>
           </Grid>
         ))}
-      </Grid>
+        </Grid>
+      )}
 
-      {/* Upcoming & Overdue Payments */}
+      {/* Upcoming & Overdue Payments - Only show if user has properties */}
+      {properties.length > 0 && (
       <Card>
         <CardContent>
           <Stack direction="row" spacing={1} alignItems="center" mb={2}>
@@ -287,11 +462,14 @@ function Dashboard() {
           </Table>
         </CardContent>
       </Card>
+      )}
 
-      {/* Outstanding Payments */}
-      <Card>
-        <OutstandingPaymentsTable />
-      </Card>
+      {/* Outstanding Payments - Only show if user has properties */}
+      {properties.length > 0 && (
+        <Card>
+          <OutstandingPaymentsTable />
+        </Card>
+      )}
     </Stack>
   );
 }

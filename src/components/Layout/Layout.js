@@ -144,11 +144,13 @@ function Layout({ children }) {
             <MenuIcon />
           </IconButton>
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
-            {/* <Typography variant="subtitle2" color="text.secondary">
-              House Rental Management
-            </Typography> */}
-            <Typography variant="h6" color="text.primary">
-               House Rental Management
+            <Typography variant="h6" color="text.primary" fontWeight="bold">
+              {user?.propertyName 
+                ? user.propertyName.charAt(0).toUpperCase() + user.propertyName.slice(1)
+                : 'Property'}
+            </Typography>
+            <Typography variant="caption" color="text.secondary">
+              Welcome back! Manage your properties and tenants efficiently.
             </Typography>
           </Box>
           <Box sx={{ flexGrow: 1 }} />

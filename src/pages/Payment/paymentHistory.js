@@ -15,9 +15,11 @@ import {
   TableBody,
   Paper,
   Divider,
+  Button,
 } from '@mui/material';
+import { Add as AddIcon } from '@mui/icons-material';
 import { fetchProperties } from '../../store/slices/propertySlice';
-import { getPayments } from '../../store/slices/paymentSlice';
+import { getPayments, clearPayments } from '../../store/slices/paymentSlice';
 
 const monthNames = [
   'January','February','March','April','May','June',
@@ -47,12 +49,22 @@ function PaymentHistoryPage() {
     dispatch(fetchProperties({ page: 1, limit: 100 }));
   }, [dispatch]);
 
+  // Clear payments when component mounts if user has no properties
+  useEffect(() => {
+    if (properties.length === 0) {
+      dispatch(clearPayments());
+    }
+  }, [dispatch, properties.length]);
+
   // Fetch payments when property, tenant, or year changes
   useEffect(() => {
-    if (propertyId) {
+    if (propertyId && properties.length > 0) {
       dispatch(getPayments({ propertyId, year }));
+    } else {
+      // Clear payments if no property selected or no properties
+      dispatch(clearPayments());
     }
-  }, [dispatch, propertyId, year]);
+  }, [dispatch, propertyId, year, properties.length]);
 
   // Get tenants for selected property
   const tenants = propertyId
@@ -85,8 +97,30 @@ function PaymentHistoryPage() {
         Payment History
       </Typography>
 
+      {/* Show message if user has no properties */}
+      {properties.length === 0 && (
+        <Card sx={{ mb: 3, bgcolor: 'info.light' }}>
+          <CardContent>
+            <Typography variant="h6" gutterBottom>
+              No Properties Found
+            </Typography>
+            <Typography variant="body2" color="text.secondary" paragraph>
+              You need to add properties first before you can view payment history.
+            </Typography>
+            <Button
+              variant="contained"
+              startIcon={<AddIcon />}
+              onClick={() => window.location.href = '/properties'}
+            >
+              Add Your First Property
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
       {/* ================= FILTERS ================= */}
-      <Card sx={{ mb: 3 }}>
+      {properties.length > 0 && (
+        <Card sx={{ mb: 3 }}>
         <CardContent>
           <Grid container spacing={2}>
             <Grid item xs={12} md={3}>
@@ -162,8 +196,10 @@ function PaymentHistoryPage() {
           </Grid>
         </CardContent>
       </Card>
+      )}
 
       {/* ================= TOTAL SUMMARY ================= */}
+      {properties.length > 0 && propertyId && filteredPayments.length > 0 && (
       <Card sx={{ mb: 3 }}>
         <CardContent>
           <Typography variant="h6">Totals</Typography>
@@ -179,9 +215,11 @@ function PaymentHistoryPage() {
           </Grid>
         </CardContent>
       </Card>
+      )}
 
       {/* ================= PAYMENT TABLE ================= */}
-      <Paper>
+      {properties.length > 0 && propertyId && (
+        <Paper>
         <Table>
           <TableHead>
             <TableRow>
@@ -193,30 +231,44 @@ function PaymentHistoryPage() {
           </TableHead>
 
           <TableBody>
-            {filteredPayments.map((p) => {
-              const color = PAYMENT_COLORS[p.type] || PAYMENT_COLORS.advance;
-              return (
-                <TableRow key={p._id} sx={{ backgroundColor: color.bg }}>
-                  <TableCell>{new Date(p.paidOn).toLocaleDateString()}</TableCell>
-                  <TableCell>{monthNames[p.month - 1]}</TableCell>
-                  <TableCell sx={{ color: color.text, fontWeight: 600 }}>{p.type}</TableCell>
-                  <TableCell align="right" sx={{ color: color.text, fontWeight: 700 }}>
-                    ₹{p.amount}
-                  </TableCell>
-                </TableRow>
-              );
-            })}
-
-            {!filteredPayments.length && (
+            {filteredPayments.length > 0 ? (
+              filteredPayments.map((p) => {
+                const color = PAYMENT_COLORS[p.type] || PAYMENT_COLORS.advance;
+                return (
+                  <TableRow key={p._id} sx={{ backgroundColor: color.bg }}>
+                    <TableCell>{new Date(p.paidOn).toLocaleDateString()}</TableCell>
+                    <TableCell>{monthNames[p.month - 1] || 'N/A'}</TableCell>
+                    <TableCell sx={{ color: color.text, fontWeight: 600 }}>{p.type}</TableCell>
+                    <TableCell align="right" sx={{ color: color.text, fontWeight: 700 }}>
+                      ₹{p.amount}
+                    </TableCell>
+                  </TableRow>
+                );
+              })
+            ) : (
               <TableRow>
-                <TableCell colSpan={4} align="center">
-                  No payment records found
+                <TableCell colSpan={4} align="center" sx={{ py: 4 }}>
+                  <Typography variant="body1" color="text.secondary">
+                    No payment records found for this property
+                  </Typography>
                 </TableCell>
               </TableRow>
             )}
           </TableBody>
         </Table>
       </Paper>
+      )}
+
+      {/* Show message when no property is selected */}
+      {properties.length > 0 && !propertyId && (
+        <Card sx={{ mt: 3 }}>
+          <CardContent>
+            <Typography variant="body1" align="center" color="text.secondary">
+              Please select a property to view payment history
+            </Typography>
+          </CardContent>
+        </Card>
+      )}
     </Box>
   );
 }
