@@ -4,6 +4,7 @@ import propertyReducer from './slices/propertySlice';
 import tenantReducer from './slices/tenantSlice';
 import statsReducer from './slices/statsSlice';
 import paymentReducer from './slices/paymentSlice';
+import maintenanceReducer from './slices/maintenanceSlice';
 
 export const store = configureStore({
   reducer: {
@@ -11,7 +12,8 @@ export const store = configureStore({
     property: propertyReducer,
     tenant: tenantReducer,
     stats: statsReducer,
-      payment: paymentReducer,
+    payment: paymentReducer,
+    maintenance: maintenanceReducer,
   },
 });
 

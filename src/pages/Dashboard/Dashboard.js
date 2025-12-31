@@ -30,6 +30,7 @@ import {
 import { fetchOverview } from '../../store/slices/statsSlice';
 import { fetchProperties } from '../../store/slices/propertySlice';
 import { fetchTenants } from '../../store/slices/tenantSlice';
+import { getPayments } from '../../store/slices/paymentSlice';
 import OutstandingPaymentsTable from './outStanding';
 
 function Dashboard() {
@@ -37,36 +38,39 @@ function Dashboard() {
   const { overview, loading } = useSelector((state) => state.stats);
   const { properties } = useSelector((state) => state.property);
   const { tenants } = useSelector((state) => state.tenant);
+  const { payments } = useSelector((state) => state.payment);
+
+  const currentYear = new Date().getFullYear();
 
   useEffect(() => {
     dispatch(fetchOverview());
-    dispatch(fetchProperties({ page: 1, limit: 50 }));
-    dispatch(fetchTenants({ page: 1, limit: 50 }));
-  }, [dispatch]);
+    dispatch(fetchProperties({ page: 1, limit: 100 }));
+    dispatch(fetchTenants({ page: 1, limit: 100 }));
+    // Fetch all payments for current year to calculate accurate rent collected
+    dispatch(getPayments({ year: currentYear }));
+  }, [dispatch, currentYear]);
 
-  const aggregate = useMemo(() => {
-    const totalRent = properties.reduce(
-      (sum, property) => sum + (property.monthlyRent || 0),
-      0
-    );
-    return { totalRent };
-  }, [properties]);
+  // Calculate actual rent collected from payment records for current year
+  const rentCollected = useMemo(() => {
+    return payments
+      .filter((p) => p.type === 'rent' && p.year === currentYear)
+      .reduce((sum, p) => sum + (p.amount || 0), 0);
+  }, [payments, currentYear]);
 
-  const rentCollected = Math.max(
-    aggregate.totalRent - (overview?.pendingRent || 0),
-    0
-  );
-
+  // Calculate overdue rent - properties with pending rent status
   const overdueRentCurrentYear = useMemo(() => {
-    const currentYear = new Date().getFullYear();
-    return tenants
-      .filter((t) => {
-        const start = t.startDate ? new Date(t.startDate) : new Date();
-        const endOfYear = new Date(currentYear, 11, 31);
-        return t.rentStatus !== 'paid' && start <= endOfYear;
+    return properties
+      .filter((p) => {
+        const tenant = p.tenant;
+        if (!tenant) return false;
+        // Check if tenant has pending rent status
+        return tenant.rentStatus === 'pending';
       })
-      .reduce((sum, t) => sum + (t.monthlyRent || 0), 0);
-  }, [tenants]);
+      .reduce((sum, p) => {
+        const rentAmount = p.rent?.monthlyRent || p.monthlyRent || 0;
+        return sum + rentAmount;
+      }, 0);
+  }, [properties]);
 
   if (loading) {
     return (
@@ -162,38 +166,62 @@ function Dashboard() {
                   const tenant = property.tenant;
                   if (!tenant) return null;
 
-                  const start = tenant.startDate
+                  // Get rent amount from property
+                  const rentAmount = property.rent?.monthlyRent || property.monthlyRent || 0;
+                  
+                  // Calculate next due date based on tenant start date
+                  const startDate = tenant.startDate
                     ? new Date(tenant.startDate)
                     : new Date();
-                  const dueDate = new Date(start);
+                  
                   const today = new Date();
+                  today.setHours(0, 0, 0, 0);
+                  
+                  // Calculate next due date (first of next month from start date)
+                  let dueDate = new Date(startDate);
+                  dueDate.setDate(1); // Set to first of the month
+                  
+                  // Move to next month
+                  dueDate.setMonth(dueDate.getMonth() + 1);
+                  
+                  // Keep moving forward until we're past today
                   while (dueDate <= today) {
                     dueDate.setMonth(dueDate.getMonth() + 1);
                   }
+                  
                   const diffDays = Math.ceil(
                     (dueDate - today) / (1000 * 60 * 60 * 24)
                   );
-                  const overdue = diffDays < 0;
+                  
+                  const overdue = diffDays < 0 || tenant.rentStatus === 'pending';
                   const risk =
-                    diffDays < 0
+                    overdue && diffDays < -7
                       ? 'High'
-                      : diffDays <= 5
+                      : overdue || diffDays <= 5
                       ? 'Medium'
                       : 'Low';
 
                   return {
                     id: property._id,
-                    shop: property.location,
+                    shop: property.shopName || property.location,
+                    shopNumber: property.shopNumber,
                     tenant: tenant.name,
                     dueDate,
                     days: diffDays,
-                    amount: property.monthlyRent || 0,
+                    amount: rentAmount,
                     status: tenant.rentStatus || 'pending',
                     overdue,
                     risk,
                   };
                 })
                 .filter(Boolean)
+                .sort((a, b) => {
+                  // Sort by overdue first, then by days
+                  if (a.overdue !== b.overdue) {
+                    return a.overdue ? -1 : 1;
+                  }
+                  return a.days - b.days;
+                })
                 .map((item) => (
                   <TableRow
                     key={item.id}
@@ -201,9 +229,17 @@ function Dashboard() {
                       backgroundColor: item.overdue ? '#ffebee' : '#e8f5e9',
                     }}
                   >
-                    <TableCell>{item.shop}</TableCell>
+                    <TableCell>
+                      {item.shop} {item.shopNumber ? `- ${item.shopNumber}` : ''}
+                    </TableCell>
                     <TableCell>{item.tenant}</TableCell>
-                    <TableCell>{item.dueDate.toLocaleDateString()}</TableCell>
+                    <TableCell>
+                      {item.dueDate.toLocaleDateString('en-IN', {
+                        day: '2-digit',
+                        month: 'short',
+                        year: 'numeric'
+                      })}
+                    </TableCell>
                     <TableCell align="center">
                       <Typography
                         fontWeight={600}

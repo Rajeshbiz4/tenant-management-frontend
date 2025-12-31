@@ -37,12 +37,29 @@ export const fetchYearlyStats = createAsyncThunk(
   }
 );
 
+export const fetchAnalytics = createAsyncThunk(
+  'stats/fetchAnalytics',
+  async ({ year, month, propertyId }, { rejectWithValue }) => {
+    try {
+      const params = {};
+      if (year) params.year = year;
+      if (month) params.month = month;
+      if (propertyId) params.propertyId = propertyId;
+      const response = await api.get('/stats/analytics', { params });
+      return response.data.data;
+    } catch (error) {
+      return rejectWithValue(error.response?.data?.message || 'Failed to fetch analytics');
+    }
+  }
+);
+
 const statsSlice = createSlice({
   name: 'stats',
   initialState: {
     overview: null,
     monthlyStats: null,
     yearlyStats: null,
+    analytics: null,
     loading: false,
     error: null,
   },
@@ -84,6 +101,17 @@ const statsSlice = createSlice({
         state.yearlyStats = action.payload;
       })
       .addCase(fetchYearlyStats.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+      })
+      .addCase(fetchAnalytics.pending, (state) => {
+        state.loading = true;
+      })
+      .addCase(fetchAnalytics.fulfilled, (state, action) => {
+        state.loading = false;
+        state.analytics = action.payload;
+      })
+      .addCase(fetchAnalytics.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
       });

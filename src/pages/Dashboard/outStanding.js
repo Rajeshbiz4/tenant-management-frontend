@@ -41,10 +41,20 @@ function OutstandingPaymentsPage() {
   }, [dispatch]);
 
   useEffect(() => {
-    properties.forEach((p) => {
-      dispatch(getPayments({ propertyId: p._id, year }));
-    });
-  }, [dispatch, properties, year]);
+    // Only fetch payments if we have properties and haven't fetched yet
+    if (properties.length > 0) {
+      // Fetch payments for all properties at once (if backend supports it)
+      // Otherwise, fetch only when a specific property is selected
+      const propertyIds = properties.map(p => p._id);
+      if (propertyIds.length > 0) {
+        // Fetch payments for the first property as a sample, or implement batch fetching
+        // For now, we'll only fetch when filters are applied to avoid multiple calls
+        if (filters.flat) {
+          dispatch(getPayments({ propertyId: filters.flat, year }));
+        }
+      }
+    }
+  }, [dispatch, filters.flat, year]);
 
   const handleFilterChange = (e) => {
     setFilters({ ...filters, [e.target.name]: e.target.value });

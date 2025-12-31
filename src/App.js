@@ -13,6 +13,8 @@ import Tenants from './pages/Tenants/Tenants';
 import Statistics from './pages/Statistics/Statistics';
 import PaymentsPage from './pages/Payment/Payment';
 import PaymentHistoryPage from './pages/Payment/paymentHistory';
+import Analytics from './pages/Analytics/Analytics';
+import Maintenance from './pages/Maintenance/Maintenance';
 
 function PrivateRoute({ children }) {
   const isAuthenticated = useSelector((state) => state.auth.isAuthenticated);
@@ -39,6 +41,8 @@ function App() {
                 <Route path="/statistics" element={<Statistics />} />
                  <Route path="/payment" element={<PaymentsPage />} />
                 <Route path="/paymenthistory" element={<PaymentHistoryPage />} />
+                <Route path="/maintenance" element={<Maintenance />} />
+                <Route path="/analytics" element={<Analytics />} />
                 <Route path="*" element={<Navigate to="/" />} />
               </Routes>
             </Layout>

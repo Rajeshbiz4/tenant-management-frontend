@@ -34,6 +34,8 @@ import {
 } from '@mui/icons-material';
 import PaymentIcon from '@mui/icons-material/Payment';
 import CurrencyRupeeIcon from '@mui/icons-material/CurrencyRupee';
+import BuildIcon from '@mui/icons-material/Build';
+import AnalyticsIcon from '@mui/icons-material/Analytics';
 import { logout } from '../../store/slices/authSlice';
 
 const drawerWidth = 220;
@@ -45,6 +47,8 @@ const menuItems = [
   //  { text: 'Reports', icon: <BarChartIcon />, path: '/statistics' },
    { text: 'Make Payments', icon: <PaymentIcon />, path: '/payment' },
     { text: 'Payments History', icon: <CurrencyRupeeIcon />, path: '/paymenthistory' },
+    { text: 'Maintenance', icon: <BuildIcon />, path: '/maintenance' },
+    { text: 'Analytics', icon: <AnalyticsIcon />, path: '/analytics' },
 ];
 
 function Layout({ children }) {
