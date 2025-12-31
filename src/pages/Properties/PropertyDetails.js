@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
+import { FormControlLabel, Checkbox } from '@mui/material';
+
 import {
   Box,
   Typography,
@@ -47,11 +49,29 @@ import {
 
 const tenantValidationSchema = Yup.object({
   name: Yup.string().required('Name is required'),
-  phone: Yup.string().required('Phone is required'),
-  email: Yup.string().email('Invalid email').required('Email is required'),
-  aadhar: Yup.string().required('Aadhar is required'),
-  startDate: Yup.date().required('Start date is required'),
+
+  phone: Yup.string()
+    .required('Phone is required'),
+
+  email: Yup.string()
+    .email('Invalid email')
+    .required('Email is required'),
+
+  aadhar: Yup.string()
+    .required('Aadhar is required'),
+
+  startDate: Yup.date()
+    .required('Start date is required'),
+
+  advance: Yup.number()
+    .typeError('Advance must be a number')
+    .positive('Advance must be greater than 0')
+    .required('Advance is required'),
+
+  isVerified: Yup.boolean()
+    .required('Verification status is required'),
 });
+
 
 function PropertyDetails() {
   const { id } = useParams();
@@ -83,16 +103,21 @@ function PropertyDetails() {
 
   const tenantForm = useFormik({
     initialValues: {
-      name: '',
-      phone: '',
-      email: '',
-      aadhar: '',
-      startDate: '',
-    },
+  name: '',
+  phone: '',
+  email: '',
+  aadhar: '',
+  startDate: '',
+  advance: '',
+  isVerified: false,
+  leaseId: id,
+  propertyId: id,
+},
+
     validationSchema: tenantValidationSchema,
     onSubmit: async (values) => {
       if (!id) return;
-      await dispatch(createTenant({ propertyId: id, tenantData: values }));
+      await dispatch(createTenant({ leaseId: id, propertyId: id, tenantData: values }));
       setTenantDialogOpen(false);
       tenantForm.resetForm();
       refreshProperty();
@@ -350,65 +375,106 @@ function PropertyDetails() {
       <Dialog open={tenantDialogOpen} onClose={() => setTenantDialogOpen(false)} maxWidth="sm" fullWidth>
         <DialogTitle>Add Tenant</DialogTitle>
         <form onSubmit={tenantForm.handleSubmit}>
-          <DialogContent>
-            <TextField
-              fullWidth
-              margin="normal"
-              id="name"
-              name="name"
-              label="Name"
-              value={tenantForm.values.name}
-              onChange={tenantForm.handleChange}
-              error={tenantForm.touched.name && Boolean(tenantForm.errors.name)}
-              helperText={tenantForm.touched.name && tenantForm.errors.name}
-            />
-            <TextField
-              fullWidth
-              margin="normal"
-              id="phone"
-              name="phone"
-              label="Phone"
-              value={tenantForm.values.phone}
-              onChange={tenantForm.handleChange}
-              error={tenantForm.touched.phone && Boolean(tenantForm.errors.phone)}
-              helperText={tenantForm.touched.phone && tenantForm.errors.phone}
-            />
-            <TextField
-              fullWidth
-              margin="normal"
-              id="email"
-              name="email"
-              label="Email"
-              value={tenantForm.values.email}
-              onChange={tenantForm.handleChange}
-              error={tenantForm.touched.email && Boolean(tenantForm.errors.email)}
-              helperText={tenantForm.touched.email && tenantForm.errors.email}
-            />
-            <TextField
-              fullWidth
-              margin="normal"
-              id="aadhar"
-              name="aadhar"
-              label="Aadhar"
-              value={tenantForm.values.aadhar}
-              onChange={tenantForm.handleChange}
-              error={tenantForm.touched.aadhar && Boolean(tenantForm.errors.aadhar)}
-              helperText={tenantForm.touched.aadhar && tenantForm.errors.aadhar}
-            />
-            <TextField
-              fullWidth
-              margin="normal"
-              id="startDate"
-              name="startDate"
-              label="Start Date"
-              type="date"
-              InputLabelProps={{ shrink: true }}
-              value={tenantForm.values.startDate}
-              onChange={tenantForm.handleChange}
-              error={tenantForm.touched.startDate && Boolean(tenantForm.errors.startDate)}
-              helperText={tenantForm.touched.startDate && tenantForm.errors.startDate}
-            />
-          </DialogContent>
+        <DialogContent>
+  <TextField
+    fullWidth
+    margin="normal"
+    id="name"
+    name="name"
+    label="Name"
+    value={tenantForm.values.name}
+    onChange={tenantForm.handleChange}
+    onBlur={tenantForm.handleBlur}
+    error={tenantForm.touched.name && Boolean(tenantForm.errors.name)}
+    helperText={tenantForm.touched.name && tenantForm.errors.name}
+  />
+
+  <TextField
+    fullWidth
+    margin="normal"
+    id="phone"
+    name="phone"
+    label="Phone"
+    value={tenantForm.values.phone}
+    onChange={tenantForm.handleChange}
+    onBlur={tenantForm.handleBlur}
+    error={tenantForm.touched.phone && Boolean(tenantForm.errors.phone)}
+    helperText={tenantForm.touched.phone && tenantForm.errors.phone}
+  />
+
+  <TextField
+    fullWidth
+    margin="normal"
+    id="email"
+    name="email"
+    label="Email"
+    value={tenantForm.values.email}
+    onChange={tenantForm.handleChange}
+    onBlur={tenantForm.handleBlur}
+    error={tenantForm.touched.email && Boolean(tenantForm.errors.email)}
+    helperText={tenantForm.touched.email && tenantForm.errors.email}
+  />
+
+  <TextField
+    fullWidth
+    margin="normal"
+    id="aadhar"
+    name="aadhar"
+    label="Aadhar"
+    value={tenantForm.values.aadhar}
+    onChange={tenantForm.handleChange}
+    onBlur={tenantForm.handleBlur}
+    error={tenantForm.touched.aadhar && Boolean(tenantForm.errors.aadhar)}
+    helperText={tenantForm.touched.aadhar && tenantForm.errors.aadhar}
+  />
+
+  <TextField
+    fullWidth
+    margin="normal"
+    id="startDate"
+    name="startDate"
+    label="Start Date"
+    type="date"
+    InputLabelProps={{ shrink: true }}
+    value={tenantForm.values.startDate}
+    onChange={tenantForm.handleChange}
+    onBlur={tenantForm.handleBlur}
+    error={tenantForm.touched.startDate && Boolean(tenantForm.errors.startDate)}
+    helperText={tenantForm.touched.startDate && tenantForm.errors.startDate}
+  />
+
+  {/* ✅ ADVANCE AMOUNT */}
+  <TextField
+    fullWidth
+    margin="normal"
+    id="advance"
+    name="advance"
+    label="Advance Amount"
+    type="number"
+    value={tenantForm.values.advance}
+    onChange={tenantForm.handleChange}
+    onBlur={tenantForm.handleBlur}
+    error={tenantForm.touched.advance && Boolean(tenantForm.errors.advance)}
+    helperText={tenantForm.touched.advance && tenantForm.errors.advance}
+  />
+
+  {/* ✅ IS VERIFIED */}
+ <FormControlLabel
+  control={
+    <Checkbox
+      name="isVerified"
+      checked={Boolean(tenantForm.values.isVerified)}
+      onChange={(e) => {
+        tenantForm.setFieldValue('isVerified', e.target.checked);
+      }}
+      onBlur={tenantForm.handleBlur}
+      color="primary"
+    />
+  }
+  label="Is Verified"
+/>
+</DialogContent>
+
           <DialogActions>
             <Button onClick={() => setTenantDialogOpen(false)}>Cancel</Button>
             <Button type="submit" variant="contained">

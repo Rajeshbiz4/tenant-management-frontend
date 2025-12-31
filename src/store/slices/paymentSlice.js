@@ -9,6 +9,7 @@ export const makePayment = createAsyncThunk(
   'payment/makePayment',
   async (paymentData, { rejectWithValue }) => {
     try {
+      console.log('Making Payment with data:', paymentData);
       const response = await api.post('/payments/make', paymentData);
       if (response.data.payment) {
         return response.data.payment;

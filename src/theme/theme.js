@@ -70,7 +70,7 @@ const theme = createTheme({
     },
   },
   shape: {
-    borderRadius: 12,
+    // borderRadius: 12,
   },
   components: {
     MuiCssBaseline: {
@@ -84,7 +84,7 @@ const theme = createTheme({
     MuiPaper: {
       styleOverrides: {
         root: {
-          borderRadius: 12,
+          // borderRadius: 12,
           border: `1px solid ${palette.border}`,
           boxShadow: '0 6px 18px rgba(15, 23, 42, 0.05)',
         },
@@ -93,7 +93,7 @@ const theme = createTheme({
     MuiCard: {
       styleOverrides: {
         root: {
-          borderRadius: 12,
+          // borderRadius: 12,
           border: `1px solid ${palette.border}`,
           boxShadow: '0 8px 22px rgba(31, 58, 99, 0.08)',
         },
@@ -103,7 +103,7 @@ const theme = createTheme({
       styleOverrides: {
         root: {
           textTransform: 'none',
-          borderRadius: 10,
+          // borderRadius: 10,
           fontWeight: 600,
         },
       },
@@ -111,7 +111,7 @@ const theme = createTheme({
     MuiChip: {
       styleOverrides: {
         root: {
-          borderRadius: 32,
+          // borderRadius: 32,
           fontWeight: 600,
           letterSpacing: 0,
         },
@@ -120,7 +120,7 @@ const theme = createTheme({
     MuiListItemButton: {
       styleOverrides: {
         root: {
-          borderRadius: 8,
+          // borderRadius: 8,
           marginInline: 12,
           '&.Mui-selected': {
             backgroundColor: 'rgba(37, 85, 166, 0.12)',

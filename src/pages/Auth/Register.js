@@ -116,7 +116,6 @@ function Register() {
             width: '400px',
             height: '400px',
             background: 'radial-gradient(circle, rgba(255,255,255,0.2) 0%, rgba(255,255,255,0) 70%)',
-            borderRadius: '50%',
             top: '-100px',
             right: '-100px',
             pointerEvents: 'none',
@@ -128,7 +127,6 @@ function Register() {
             sx={{
               width: { xs: 60, md: 72 },
               height: { xs: 60, md: 72 },
-              borderRadius: 3,
               background: 'rgba(255,255,255,0.2)',
               backdropFilter: 'blur(10px)',
               display: 'flex',
@@ -205,7 +203,7 @@ function Register() {
             p: { xs: 3, sm: 4, md: 5, lg: 6 },
             width: '100%',
             maxWidth: 520,
-            borderRadius: 2,
+           
             border: `1px solid ${theme.palette.divider}`,
             boxShadow: '0 4px 12px rgba(0, 0, 0, 0.06)',
             background: isMobile ? 'rgba(255, 255, 255, 0.95)' : '#ffffff',
@@ -249,7 +247,7 @@ function Register() {
               severity="error"
               sx={{
                 mb: 3,
-                borderRadius: 1.5,
+              
                 animation: 'slideDown 0.3s ease-out',
               }}
             >
@@ -281,7 +279,7 @@ function Register() {
                 }}
                 sx={{
                   '& .MuiOutlinedInput-root': {
-                    borderRadius: 1.5,
+                   
                     transition: 'all 0.2s ease',
                     '&:hover fieldset': {
                       borderColor: theme.palette.primary.main,
@@ -310,7 +308,7 @@ function Register() {
                 }}
                 sx={{
                   '& .MuiOutlinedInput-root': {
-                    borderRadius: 1.5,
+                   
                     transition: 'all 0.2s ease',
                     '&:hover fieldset': {
                       borderColor: theme.palette.primary.main,
@@ -342,7 +340,7 @@ function Register() {
               }}
               sx={{
                 '& .MuiOutlinedInput-root': {
-                  borderRadius: 1.5,
+                 
                   transition: 'all 0.2s ease',
                   '&:hover fieldset': {
                     borderColor: theme.palette.primary.main,
@@ -374,7 +372,7 @@ function Register() {
               }}
               sx={{
                 '& .MuiOutlinedInput-root': {
-                  borderRadius: 1.5,
+                 
                   transition: 'all 0.2s ease',
                   '&:hover fieldset': {
                     borderColor: theme.palette.primary.main,
@@ -398,7 +396,7 @@ function Register() {
               helperText={formik.touched.userType && formik.errors.userType}
               sx={{
                 '& .MuiOutlinedInput-root': {
-                  borderRadius: 1.5,
+                 
                   transition: 'all 0.2s ease',
                   '&:hover fieldset': {
                     borderColor: theme.palette.primary.main,
@@ -432,7 +430,7 @@ function Register() {
               }}
               sx={{
                 '& .MuiOutlinedInput-root': {
-                  borderRadius: 1.5,
+                 
                   transition: 'all 0.2s ease',
                   '&:hover fieldset': {
                     borderColor: theme.palette.primary.main,
@@ -483,7 +481,7 @@ function Register() {
                 }}
                 sx={{
                   '& .MuiOutlinedInput-root': {
-                    borderRadius: 1.5,
+                   
                     transition: 'all 0.2s ease',
                     '&:hover fieldset': {
                       borderColor: theme.palette.primary.main,
@@ -531,7 +529,7 @@ function Register() {
                 }}
                 sx={{
                   '& .MuiOutlinedInput-root': {
-                    borderRadius: 1.5,
+                   
                     transition: 'all 0.2s ease',
                     '&:hover fieldset': {
                       borderColor: theme.palette.primary.main,
@@ -581,7 +579,7 @@ function Register() {
               sx={{
                 py: 1.5,
                 fontWeight: 600,
-                borderRadius: 1.5,
+               
                 borderColor: theme.palette.divider,
                 color: theme.palette.text.secondary,
                 transition: 'all 0.2s ease',

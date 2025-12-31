@@ -17,6 +17,7 @@ export const createTenant = createAsyncThunk(
   'tenant/createTenant',
   async ({ propertyId, tenantData }, { rejectWithValue }) => {
     try {
+      console.log('Creating tenant with data:', tenantData, propertyId);
       const response = await api.post(`/tenant/properties/${propertyId}/tenant`, tenantData);
       return response.data;
     } catch (error) {

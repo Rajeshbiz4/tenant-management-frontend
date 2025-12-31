@@ -27,6 +27,7 @@ const validationSchema = Yup.object({
   type: Yup.string().required('Payment type is required'),
   amount: Yup.number().min(1, 'Minimum 1').required('Amount is required'),
   paidOn: Yup.date().required('Payment date is required'),
+  rentMonth: Yup.number().required('Month is required'),
 });
 
 const monthNames = [
@@ -58,20 +59,24 @@ function PaymentsPage() {
       type: 'rent',
       amount: '',
       paidOn: new Date().toISOString().split('T')[0],
+      rentMonth: new Date().getMonth() + 1, // ✅ default current month
+
     },
     validationSchema,
     onSubmit: async (values) => {
       const paidDate = new Date(values.paidOn);
-      const payload = {
-        ...values,
-        month: paidDate.getMonth() + 1,
-        year: paidDate.getFullYear(),
-      };
 
-      await dispatch(makePayment(payload));
-      paymentFormik.resetForm();
-      dispatch(getPayments({ propertyId: values.propertyId, year }));
-    },
+    const payload = {
+      ...values,
+      rentMonth: values.rentMonth,     // ✅ explicitly added
+      month: values.rentMonth,         // (optional: keep if backend already uses `month`)
+      year: paidDate.getFullYear(),
+    };
+
+    await dispatch(makePayment(payload));
+    paymentFormik.resetForm();
+    dispatch(getPayments({ propertyId: values.propertyId, year }));
+  },
   });
 
   const handlePropertyChange = (propertyId) => {
@@ -168,81 +173,128 @@ function PaymentsPage() {
 
       {/* Payment Form */}
       <Card sx={{ mb: 3 }}>
-        <CardContent>
-          <form onSubmit={paymentFormik.handleSubmit}>
-            <Grid container spacing={2}>
-              <Grid item xs={12} md={6}>
-                <TextField
-                  select
-                  fullWidth
-                  label="Property"
-                  value={paymentFormik.values.propertyId}
-                  onChange={(e) => handlePropertyChange(e.target.value)}
-                >
-                  {properties.map((p) => (
-                    <MenuItem key={p._id} value={p._id}>
-                      {p.shopName} - {p.location}
-                    </MenuItem>
-                  ))}
-                </TextField>
-              </Grid>
+       <CardContent>
+  <form onSubmit={paymentFormik.handleSubmit}>
+    <Grid container spacing={2}>
 
-              <Grid item xs={12} md={6}>
-                <TextField
-                  fullWidth
-                  label="Tenant"
-                  value={selectedProperty?.tenant?.name || ''}
-                  disabled
-                />
-              </Grid>
+      {/* Property */}
+      <Grid item xs={12} md={6}>
+        <TextField
+          select
+          fullWidth
+          label="Property"
+          name="propertyId"
+          value={paymentFormik.values.propertyId}
+          onChange={(e) => handlePropertyChange(e.target.value)}
+          onBlur={paymentFormik.handleBlur}
+          error={paymentFormik.touched.propertyId && Boolean(paymentFormik.errors.propertyId)}
+          helperText={paymentFormik.touched.propertyId && paymentFormik.errors.propertyId}
+        >
+          {properties.map((p) => (
+            <MenuItem key={p._id} value={p._id}>
+              {p.shopName} - {p.location}
+            </MenuItem>
+          ))}
+        </TextField>
+      </Grid>
 
-              <Grid item xs={12} md={4}>
-                <TextField
-                  select
-                  fullWidth
-                  label="Type"
-                  name="type"
-                  value={paymentFormik.values.type}
-                  onChange={paymentFormik.handleChange}
-                >
-                  <MenuItem value="rent">Rent</MenuItem>
-                  <MenuItem value="maintenance">Maintenance</MenuItem>
-                  <MenuItem value="light">Light</MenuItem>
-                  <MenuItem value="advance">Advance</MenuItem>
-                </TextField>
-              </Grid>
+      {/* Tenant */}
+      <Grid item xs={12} md={6}>
+        <TextField
+          fullWidth
+          label="Tenant"
+          value={selectedProperty?.tenant?.name || ''}
+          disabled
+        />
+      </Grid>
 
-              <Grid item xs={12} md={4}>
-                <TextField
-                  fullWidth
-                  type="number"
-                  label="Amount"
-                  name="amount"
-                  value={paymentFormik.values.amount}
-                  onChange={paymentFormik.handleChange}
-                />
-              </Grid>
+      {/* Payment Type */}
+      <Grid item xs={12} md={4}>
+        <TextField
+          select
+          fullWidth
+          label="Type"
+          name="type"
+          value={paymentFormik.values.type}
+          onChange={paymentFormik.handleChange}
+          onBlur={paymentFormik.handleBlur}
+          error={paymentFormik.touched.type && Boolean(paymentFormik.errors.type)}
+          helperText={paymentFormik.touched.type && paymentFormik.errors.type}
+        >
+          <MenuItem value="rent">Rent</MenuItem>
+          <MenuItem value="maintenance">Maintenance</MenuItem>
+          <MenuItem value="light">Light</MenuItem>
+          <MenuItem value="advance">Advance</MenuItem>
+        </TextField>
+      </Grid>
 
-              <Grid item xs={12} md={4}>
-                <TextField
-                  fullWidth
-                  type="date"
-                  label="Paid On"
-                  name="paidOn"
-                  InputLabelProps={{ shrink: true }}
-                  value={paymentFormik.values.paidOn}
-                  onChange={paymentFormik.handleChange}
-                />
-              </Grid>
+      {/* Month */}
+      <Grid item xs={12} md={4}>
+        <TextField
+          select
+          fullWidth
+          label="Month"
+          name="rentMonth"
+          value={paymentFormik.values.rentMonth}
+          onChange={paymentFormik.handleChange}
+          onBlur={paymentFormik.handleBlur}
+          error={paymentFormik.touched.rentMonth && Boolean(paymentFormik.errors.rentMonth)}
+          helperText={paymentFormik.touched.rentMonth && paymentFormik.errors.rentMonth}
+        >
+          {monthNames.map((month, index) => (
+            <MenuItem key={month} value={index + 1}>
+              {month}
+            </MenuItem>
+          ))}
+        </TextField>
+      </Grid>
 
-              <Grid item xs={12}>
-                <Button type="submit" variant="contained">
-                  Make Payment
-                </Button>
-              </Grid>
-            </Grid>
-          </form>
-        </CardContent>
+      {/* Amount */}
+      <Grid item xs={12} md={4}>
+        <TextField
+          fullWidth
+          type="number"
+          label="Amount"
+          name="amount"
+          value={paymentFormik.values.amount}
+          onChange={paymentFormik.handleChange}
+          onBlur={paymentFormik.handleBlur}
+          error={paymentFormik.touched.amount && Boolean(paymentFormik.errors.amount)}
+          helperText={paymentFormik.touched.amount && paymentFormik.errors.amount}
+        />
+      </Grid>
+
+      {/* Paid On */}
+      <Grid item xs={12} md={4}>
+        <TextField
+          fullWidth
+          type="date"
+          label="Paid On"
+          name="paidOn"
+          InputLabelProps={{ shrink: true }}
+          value={paymentFormik.values.paidOn}
+          onChange={paymentFormik.handleChange}
+          onBlur={paymentFormik.handleBlur}
+          error={paymentFormik.touched.paidOn && Boolean(paymentFormik.errors.paidOn)}
+          helperText={paymentFormik.touched.paidOn && paymentFormik.errors.paidOn}
+        />
+      </Grid>
+
+      {/* Submit */}
+      <Grid item xs={12}>
+        <Button
+          type="submit"
+          variant="contained"
+          disabled={!paymentFormik.isValid || paymentFormik.isSubmitting}
+        >
+          Make Payment
+        </Button>
+      </Grid>
+
+    </Grid>
+  </form>
+</CardContent>
+
       </Card>
 
       {/* Yearly Summary */}

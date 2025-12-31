@@ -21,19 +21,55 @@ import {
 
 const validationSchema = Yup.object({
   propertyType: Yup.string().required('Property type is required'),
+
   shopName: Yup.string().required('Shop name is required'),
+
   shopNumber: Yup.string().required('Shop number is required'),
-  area: Yup.number().positive('Area must be positive').required('Area is required'),
+
+  area: Yup.number()
+    .typeError('Area must be a number')
+    .moreThan(0, 'Area must be greater than 0')
+    .required('Area is required'),
+
   location: Yup.string().required('Location is required'),
-  rentAmount: Yup.number().positive('Rent must be positive').required('Rent amount is required'),
-  rentDeposit: Yup.number().min(0, 'Deposit must be positive').required('Deposit is required'),
-  rentPaymentDay: Yup.number().min(1).max(31, 'Payment day must be 1-31').required('Payment day is required'),
-  electricitySubmeter: Yup.string(),
-  electricityLastUnit: Yup.number().min(0),
-  electricityUnitRate: Yup.number().min(0),
+
   agreementStart: Yup.string().required('Agreement start date required'),
-  agreementMonths: Yup.number().min(0, 'Months cannot be negative'),
+
+  agreementMonths: Yup.number()
+    .typeError('Agreement months must be a number')
+    .moreThan(0, 'Agreement months must be greater than 0')
+    .required('Agreement months is required'),
+
+  monthlyRent: Yup.number()
+    .typeError('Monthly rent must be a number')
+    .moreThan(0, 'Monthly rent must be greater than 0')
+    .required('Monthly rent is required'),
+
+  maintenance: Yup.number()
+    .typeError('Maintenance must be a number')
+    .moreThan(0, 'Maintenance must be greater than 0')
+    .required('Maintenance is required'),
+
+  lightBill: Yup.number()
+    .typeError('Light bill must be a number')
+    .moreThan(0, 'Light bill must be greater than 0')
+    .required('Light bill is required'),
+
+  rentLastPaid: Yup.string().nullable(),
+
+  electricitySubmeter: Yup.string(),
+
+  electricityLastUnit: Yup.number()
+    .typeError('Last unit must be a number')
+    .moreThan(0, 'Last unit must be greater than 0')
+    .required('Last unit is required'),
+
+  electricityUnitRate: Yup.number()
+    .typeError('Unit rate must be a number')
+    .moreThan(0, 'Unit rate must be greater than 0')
+    .required('Unit rate is required'),
 });
+
 
 const getPropertyIcon = (type) => {
   switch (type) {
@@ -64,20 +100,22 @@ function Properties() {
 
   const formik = useFormik({
     initialValues: {
-      propertyType: '',
-      shopName: '',
-      shopNumber: '',
-      area: '',
-      location: '',
-      agreementStart: '',
-      agreementMonths: 0,
-      rentAmount: 0,
-      rentDeposit: 0,
-      rentPaymentDay: 1,
-      electricitySubmeter: '',
-      electricityLastUnit: 0,
-      electricityUnitRate: 0,
-      tenant: null
+     propertyType: '',
+  shopName: '',
+  shopNumber: '',
+  area: '',
+  location: '',
+  agreementStart: '',
+  agreementMonths: '',
+  monthlyRent: '',
+  maintenance: '',
+  lightBill: '',
+  rentLastPaid: '',
+  electricitySubmeter: '',
+  electricityLastUnit: '',
+  electricityUnitRate: '',
+  isActive: true,
+  tenant: null
     },
     validationSchema,
     onSubmit: async (values) => {
@@ -87,22 +125,25 @@ function Properties() {
         shopNumber: values.shopNumber,
         area: Number(values.area),
         location: values.location,
+        monthlyRent: Number(values.monthlyRent),
+        maintenance: Number(values.maintenance),
+        lightBill: Number(values.lightBill),
         agreement: {
           startDate: values.agreementStart,
           months: Number(values.agreementMonths),
         },
         rent: {
-          amount: Number(values.rentAmount),
-          deposit: Number(values.rentDeposit),
-          paymentDay: Number(values.rentPaymentDay),
+          monthlyRent: Number(values.monthlyRent),
+          maintenance: Number(values.maintenance),
+          lastPaid: values.rentLastPaid || null,
         },
         electricity: {
           submeterNo: values.electricitySubmeter,
           lastUnit: Number(values.electricityLastUnit),
           unitRate: Number(values.electricityUnitRate),
         },
+        isActive: !!values.isActive,
         tenant: values.tenant || null,
-        isActive: values.tenant ? true : false
       };
 
       if (editingProperty) {
@@ -121,19 +162,21 @@ function Properties() {
   const handleEdit = (property) => {
     setEditingProperty(property);
     formik.setValues({
-      propertyType: property.propertyType,
-      shopName: property.shopName,
-      shopNumber: property.shopNumber,
-      area: property.area,
-      location: property.location,
+      propertyType: property.propertyType || '',
+      shopName: property.shopName || '',
+      shopNumber: property.shopNumber || '',
+      area: property.area ?? '',
+      location: property.location || '',
       agreementStart: property.agreement?.startDate || '',
       agreementMonths: property.agreement?.months || 0,
-      rentAmount: property.rent?.amount || 0,
-      rentDeposit: property.rent?.deposit || 0,
-      rentPaymentDay: property.rent?.paymentDay || 1,
+      monthlyRent: property.monthlyRent ?? property.rent?.monthlyRent ?? 0,
+      maintenance: property.maintenance ?? property.rent?.maintenance ?? 0,
+      lightBill: property.lightBill ?? 0,
+      rentLastPaid: property.rent?.lastPaid || '',
       electricitySubmeter: property.electricity?.submeterNo || '',
       electricityLastUnit: property.electricity?.lastUnit || 0,
       electricityUnitRate: property.electricity?.unitRate || 0,
+      isActive: property.isActive ?? !!property.tenant,
       tenant: property.tenant || null,
     });
     setOpen(true);
@@ -197,63 +240,62 @@ function Properties() {
               <Typography align="center">No shops found.</Typography>
             </Grid>
           )}
-        {properties.map((property) => (
-  <Grid item xs={12} sm={6} md={4} key={property._id}>
-    <Card sx={{ 
-      boxShadow: 3, 
-      transition: 'transform 0.2s, box-shadow 0.2s', 
-      '&:hover': { transform: 'scale(1.03)', boxShadow: 6 } 
-    }}>
-      {/* Header with avatar and property info */}
-      <CardContent sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-        <Avatar sx={{ bgcolor: 'primary.light', width: 56, height: 56 }}>
-          {getPropertyIcon(property.propertyType)}
-        </Avatar>
-        <Box flex={1}>
-          <Typography variant="h6" gutterBottom>{property.shopName}</Typography>
-          <Typography variant="body2" color="text.secondary" gutterBottom>
-            {property.shopNumber} | {property.propertyType} | {property.area} sq.ft
-          </Typography>
-          <Stack direction="row" spacing={1} flexWrap="wrap" sx={{ mb: 0.5 }}>
-            <Chip label={`Rent: ₹${property.rent?.amount || 0}`} size="small" color="primary" />
-            <Chip label={`Deposit: ₹${property.rent?.deposit || 0}`} size="small" color="success" />
-            <Chip label={`Day ${property.rent?.paymentDay || 1}`} size="small" color="warning" />
-          </Stack>
-          <Typography variant="body2" color="text.secondary">
-            Agreement: {property.agreement?.startDate ? format(new Date(property.agreement.startDate), 'dd MMM yyyy') : '-'} 
-            ({property.agreement?.months || 0} months)
-          </Typography>
-          <Chip 
-            label={property.tenant ? 'Active' : 'Vacant'} 
-            color={property.tenant ? 'success' : 'default'} 
-            size="small" 
-            sx={{ mt: 1 }} 
-          />
-        </Box>
-      </CardContent>
+          {properties.map((property) => (
+            <Grid item xs={12} sm={6} md={4} key={property._id}>
+              <Card sx={{
+                boxShadow: 3,
+                transition: 'transform 0.2s, box-shadow 0.2s',
+                '&:hover': { transform: 'scale(1.03)', boxShadow: 6 }
+              }}>
+                {/* Header with avatar and property info */}
+                <CardContent sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+                  <Avatar sx={{ bgcolor: 'primary.light', width: 56, height: 56 }}>
+                    {getPropertyIcon(property.propertyType)}
+                  </Avatar>
+                  <Box flex={1}>
+                    <Typography variant="h6" gutterBottom>{property.shopName}</Typography>
+                    <Typography variant="body2" color="text.secondary" gutterBottom>
+                      {property.shopNumber} | {property.propertyType} | {property.area} sq.ft
+                    </Typography>
+                    <Stack direction="row" spacing={1} flexWrap="wrap" sx={{ mb: 0.5 }}>
+                      <Chip label={`Rent: ₹${property.monthlyRent ?? property.rent?.monthlyRent ?? 0}`} size="small" color="primary" />
+                      <Chip label={`Maintenance: ₹${property.maintenance ?? property.rent?.maintenance ?? 0}`} size="small" color="info" />
+                      <Chip label={`Light: ₹${property.lightBill ?? 0}`} size="small" color="warning" />
+                    </Stack>
+                    <Typography variant="body2" color="text.secondary">
+                      Agreement: {property.agreement?.startDate ? format(new Date(property.agreement.startDate), 'dd MMM yyyy') : '-'}
+                      ({property.agreement?.months || 0} months)
+                    </Typography>
+                    <Chip
+                      label={property.tenant ? 'Active' : 'Vacant'}
+                      color={property.tenant ? 'success' : 'default'}
+                      size="small"
+                      sx={{ mt: 1 }}
+                    />
+                  </Box>
+                </CardContent>
 
-      {/* Actions */}
-      <CardActions sx={{ justifyContent: 'flex-end', pt: 0 }}>
-        <Tooltip title="View Details">
-          <IconButton size="small" onClick={() => navigate(`/properties/${property._id}`)}>
-            <ViewIcon fontSize="inherit" />
-          </IconButton>
-        </Tooltip>
-        <Tooltip title="Edit Property">
-          <IconButton size="small" onClick={() => handleEdit(property)}>
-            <EditIcon fontSize="inherit" />
-          </IconButton>
-        </Tooltip>
-        <Tooltip title="Delete Property">
-          <IconButton size="small" color="error" onClick={() => handleDelete(property._id)}>
-            <DeleteIcon fontSize="inherit" />
-          </IconButton>
-        </Tooltip>
-      </CardActions>
-    </Card>
-  </Grid>
-))}
-
+                {/* Actions */}
+                <CardActions sx={{ justifyContent: 'flex-end', pt: 0 }}>
+                  <Tooltip title="View Details">
+                    <IconButton size="small" onClick={() => navigate(`/properties/${property._id}`)}>
+                      <ViewIcon fontSize="inherit" />
+                    </IconButton>
+                  </Tooltip>
+                  <Tooltip title="Edit Property">
+                    <IconButton size="small" onClick={() => handleEdit(property)}>
+                      <EditIcon fontSize="inherit" />
+                    </IconButton>
+                  </Tooltip>
+                  <Tooltip title="Delete Property">
+                    <IconButton size="small" color="error" onClick={() => handleDelete(property._id)}>
+                      <DeleteIcon fontSize="inherit" />
+                    </IconButton>
+                  </Tooltip>
+                </CardActions>
+              </Card>
+            </Grid>
+          ))}
         </Grid>
       )}
 
@@ -268,33 +310,208 @@ function Properties() {
       <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
         <DialogTitle>{editingProperty ? 'Edit Property' : 'Add Property'}</DialogTitle>
         <form onSubmit={formik.handleSubmit}>
-          <DialogContent>
-            {/* Basic Info */}
-            <TextField fullWidth margin="normal" label="Shop Name" name="shopName" value={formik.values.shopName} onChange={formik.handleChange} />
-            <TextField fullWidth margin="normal" label="Shop Number" name="shopNumber" value={formik.values.shopNumber} onChange={formik.handleChange} />
-            <TextField select fullWidth margin="normal" label="Property Type" name="propertyType" value={formik.values.propertyType} onChange={formik.handleChange}>
-              <MenuItem value="flat">Flat</MenuItem>
-              <MenuItem value="shop">Shop</MenuItem>
-              <MenuItem value="plot">Plot</MenuItem>
-            </TextField>
-            <TextField fullWidth margin="normal" label="Area (sq.ft)" name="area" type="number" value={formik.values.area} onChange={formik.handleChange} />
-            <TextField fullWidth margin="normal" label="Location" name="location" value={formik.values.location} onChange={formik.handleChange} />
+        <DialogContent>
+  {/* Basic Info */}
 
-            {/* Agreement */}
-            <TextField fullWidth margin="normal" label="Agreement Start Date" name="agreementStart" type="date" InputLabelProps={{ shrink: true }} value={formik.values.agreementStart ? new Date(formik.values.agreementStart).toISOString().split('T')[0] : ''} onChange={formik.handleChange} />
-            <TextField fullWidth margin="normal" label="Agreement Months" name="agreementMonths" type="number" value={formik.values.agreementMonths} onChange={formik.handleChange} />
+  <TextField
+    fullWidth
+    margin="normal"
+    label="Shop Name"
+    name="shopName"
+    value={formik.values.shopName}
+    onChange={formik.handleChange}
+    onBlur={formik.handleBlur}
+    error={formik.touched.shopName && Boolean(formik.errors.shopName)}
+    helperText={formik.touched.shopName && formik.errors.shopName}
+  />
 
-            {/* Rent */}
-            <TextField fullWidth margin="normal" label="Rent Amount" name="rentAmount" type="number" value={formik.values.rentAmount} onChange={formik.handleChange} />
-            <TextField fullWidth margin="normal" label="Deposit" name="rentDeposit" type="number" value={formik.values.rentDeposit} onChange={formik.handleChange} />
-            <TextField fullWidth margin="normal" label="Payment Day" name="rentPaymentDay" type="number" value={formik.values.rentPaymentDay} onChange={formik.handleChange} />
+  <TextField
+    fullWidth
+    margin="normal"
+    label="Shop Number"
+    name="shopNumber"
+    value={formik.values.shopNumber}
+    onChange={formik.handleChange}
+    onBlur={formik.handleBlur}
+    error={formik.touched.shopNumber && Boolean(formik.errors.shopNumber)}
+    helperText={formik.touched.shopNumber && formik.errors.shopNumber}
+  />
 
-            {/* Electricity */}
-            <TextField fullWidth margin="normal" label="Submeter No" name="electricitySubmeter" value={formik.values.electricitySubmeter} onChange={formik.handleChange} />
-            <TextField fullWidth margin="normal" label="Last Unit" name="electricityLastUnit" type="number" value={formik.values.electricityLastUnit} onChange={formik.handleChange} />
-            <TextField fullWidth margin="normal" label="Unit Rate" name="electricityUnitRate" type="number" value={formik.values.electricityUnitRate} onChange={formik.handleChange} />
+  <TextField
+    select
+    fullWidth
+    margin="normal"
+    label="Property Type"
+    name="propertyType"
+    value={formik.values.propertyType}
+    onChange={formik.handleChange}
+    onBlur={formik.handleBlur}
+    error={formik.touched.propertyType && Boolean(formik.errors.propertyType)}
+    helperText={formik.touched.propertyType && formik.errors.propertyType}
+  >
+    <MenuItem value="flat">Flat</MenuItem>
+    <MenuItem value="shop">Shop</MenuItem>
+    <MenuItem value="plot">Plot</MenuItem>
+  </TextField>
 
-          </DialogContent>
+  <TextField
+    fullWidth
+    margin="normal"
+    label="Area (sq.ft)"
+    name="area"
+    type="number"
+    value={formik.values.area}
+    onChange={formik.handleChange}
+    onBlur={formik.handleBlur}
+    error={formik.touched.area && Boolean(formik.errors.area)}
+    helperText={formik.touched.area && formik.errors.area}
+  />
+
+  <TextField
+    fullWidth
+    margin="normal"
+    label="Location"
+    name="location"
+    value={formik.values.location}
+    onChange={formik.handleChange}
+    onBlur={formik.handleBlur}
+    error={formik.touched.location && Boolean(formik.errors.location)}
+    helperText={formik.touched.location && formik.errors.location}
+  />
+
+  {/* Agreement */}
+
+  <TextField
+    fullWidth
+    margin="normal"
+    label="Agreement Start Date"
+    name="agreementStart"
+    type="date"
+    InputLabelProps={{ shrink: true }}
+    value={
+      formik.values.agreementStart
+        ? new Date(formik.values.agreementStart).toISOString().split('T')[0]
+        : ''
+    }
+    onChange={formik.handleChange}
+    onBlur={formik.handleBlur}
+    error={formik.touched.agreementStart && Boolean(formik.errors.agreementStart)}
+    helperText={formik.touched.agreementStart && formik.errors.agreementStart}
+  />
+
+  <TextField
+    fullWidth
+    margin="normal"
+    label="Agreement Months"
+    name="agreementMonths"
+    type="number"
+    value={formik.values.agreementMonths}
+    onChange={formik.handleChange}
+    onBlur={formik.handleBlur}
+    error={formik.touched.agreementMonths && Boolean(formik.errors.agreementMonths)}
+    helperText={formik.touched.agreementMonths && formik.errors.agreementMonths}
+  />
+
+  {/* Rent */}
+
+  <TextField
+    fullWidth
+    margin="normal"
+    label="Monthly Rent"
+    name="monthlyRent"
+    type="number"
+    value={formik.values.monthlyRent}
+    onChange={formik.handleChange}
+    onBlur={formik.handleBlur}
+    error={formik.touched.monthlyRent && Boolean(formik.errors.monthlyRent)}
+    helperText={formik.touched.monthlyRent && formik.errors.monthlyRent}
+  />
+
+  <TextField
+    fullWidth
+    margin="normal"
+    label="Maintenance"
+    name="maintenance"
+    type="number"
+    value={formik.values.maintenance}
+    onChange={formik.handleChange}
+    onBlur={formik.handleBlur}
+    error={formik.touched.maintenance && Boolean(formik.errors.maintenance)}
+    helperText={formik.touched.maintenance && formik.errors.maintenance}
+  />
+
+  <TextField
+    fullWidth
+    margin="normal"
+    label="Light Bill"
+    name="lightBill"
+    type="number"
+    value={formik.values.lightBill}
+    onChange={formik.handleChange}
+    onBlur={formik.handleBlur}
+    error={formik.touched.lightBill && Boolean(formik.errors.lightBill)}
+    helperText={formik.touched.lightBill && formik.errors.lightBill}
+  />
+
+  <TextField
+    fullWidth
+    margin="normal"
+    label="Rent Last Paid"
+    name="rentLastPaid"
+    type="date"
+    InputLabelProps={{ shrink: true }}
+    value={
+      formik.values.rentLastPaid
+        ? new Date(formik.values.rentLastPaid).toISOString().split('T')[0]
+        : ''
+    }
+    onChange={formik.handleChange}
+    onBlur={formik.handleBlur}
+    error={formik.touched.rentLastPaid && Boolean(formik.errors.rentLastPaid)}
+    helperText={formik.touched.rentLastPaid && formik.errors.rentLastPaid}
+  />
+
+  {/* Electricity */}
+
+  <TextField
+    fullWidth
+    margin="normal"
+    label="Submeter No"
+    name="electricitySubmeter"
+    value={formik.values.electricitySubmeter}
+    onChange={formik.handleChange}
+    onBlur={formik.handleBlur}
+    error={formik.touched.electricitySubmeter && Boolean(formik.errors.electricitySubmeter)}
+    helperText={formik.touched.electricitySubmeter && formik.errors.electricitySubmeter}
+  />
+
+  <TextField
+    fullWidth
+    margin="normal"
+    label="Last Unit"
+    name="electricityLastUnit"
+    type="number"
+    value={formik.values.electricityLastUnit}
+    onChange={formik.handleChange}
+    onBlur={formik.handleBlur}
+    error={formik.touched.electricityLastUnit && Boolean(formik.errors.electricityLastUnit)}
+    helperText={formik.touched.electricityLastUnit && formik.errors.electricityLastUnit}
+  />
+
+  <TextField
+    fullWidth
+    margin="normal"
+    label="Unit Rate"
+    name="electricityUnitRate"
+    type="number"
+    value={formik.values.electricityUnitRate}
+    onChange={formik.handleChange}
+    onBlur={formik.handleBlur}
+    error={formik.touched.electricityUnitRate && Boolean(formik.errors.electricityUnitRate)}
+    helperText={formik.touched.electricityUnitRate && formik.errors.electricityUnitRate}
+  />
+</DialogContent>
+
           <DialogActions>
             <Button onClick={handleClose}>Cancel</Button>
             <Button type="submit" variant="contained">{editingProperty ? 'Update' : 'Create'}</Button>
