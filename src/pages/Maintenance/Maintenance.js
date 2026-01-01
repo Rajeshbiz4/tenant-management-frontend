@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import {
   Box,
@@ -12,7 +12,6 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
-  Grid,
   Table,
   TableBody,
   TableCell,
@@ -50,6 +49,12 @@ import {
   deleteMaintenance,
 } from '../../store/slices/maintenanceSlice';
 import { fetchProperties } from '../../store/slices/propertySlice';
+import ResponsivePageLayout, { 
+  ResponsiveHeader, 
+  ResponsiveFilters,
+  ResponsiveStatsGrid,
+  ResponsiveSection
+} from '../../components/Layout/ResponsivePageLayout';
 
 const validationSchema = Yup.object({
   property: Yup.string().required('Flat is required'),
@@ -118,9 +123,9 @@ function Maintenance() {
       };
 
       if (editingMaintenance) {
-        await dispatch(updateMaintenance({ id: editingMaintenance._id, ...payload }));
+        dispatch(updateMaintenance({ id: editingMaintenance._id, ...payload }));
       } else {
-        await dispatch(createMaintenance(payload));
+        dispatch(createMaintenance(payload));
       }
 
       setOpen(false);
@@ -149,9 +154,9 @@ function Maintenance() {
     setOpen(true);
   };
 
-  const handleDelete = async (id) => {
+  const handleDelete = (id) => {
     if (window.confirm('Are you sure you want to delete this maintenance record?')) {
-      await dispatch(deleteMaintenance(id));
+      dispatch(deleteMaintenance(id));
       dispatch(fetchMaintenance({ page, limit: 10 }));
       dispatch(fetchMaintenanceStats({}));
     }
@@ -167,9 +172,9 @@ function Maintenance() {
   const maintainers = [...new Set(maintenanceRecords.map(m => m.maintainer))].sort();
 
   return (
-    <Box>
+    <ResponsivePageLayout>
       {/* Header */}
-      <Box display="flex" flexDirection={{ xs: 'column', md: 'row' }} justifyContent="space-between" gap={2} mb={3}>
+      <ResponsiveHeader>
         <Box>
           <Typography variant="h4">Maintenance Management</Typography>
           <Typography variant="body2" color="text.secondary">
@@ -188,12 +193,12 @@ function Maintenance() {
         >
           Add Maintenance
         </Button>
-      </Box>
+      </ResponsiveHeader>
 
       {/* Overall Spending Board */}
       {stats && (
-        <Grid container spacing={3} mb={3}>
-          <Grid item xs={12} sm={6} md={3}>
+        <ResponsiveSection>
+          <ResponsiveStatsGrid>
             <Card sx={{ bgcolor: 'primary.main', color: 'white' }}>
               <CardContent>
                 <Box display="flex" alignItems="center" gap={1} mb={1}>
@@ -206,8 +211,6 @@ function Maintenance() {
                 </Typography>
               </CardContent>
             </Card>
-          </Grid>
-          <Grid item xs={12} sm={6} md={3}>
             <Card sx={{ bgcolor: 'success.main', color: 'white' }}>
               <CardContent>
                 <Box display="flex" alignItems="center" gap={1} mb={1}>
@@ -220,8 +223,6 @@ function Maintenance() {
                 </Typography>
               </CardContent>
             </Card>
-          </Grid>
-          <Grid item xs={12} sm={6} md={3}>
             <Card sx={{ bgcolor: 'warning.main', color: 'white' }}>
               <CardContent>
                 <Box display="flex" alignItems="center" gap={1} mb={1}>
@@ -234,8 +235,6 @@ function Maintenance() {
                 </Typography>
               </CardContent>
             </Card>
-          </Grid>
-          <Grid item xs={12} sm={6} md={3}>
             <Card sx={{ bgcolor: 'info.main', color: 'white' }}>
               <CardContent>
                 <Box display="flex" alignItems="center" gap={1} mb={1}>
@@ -248,179 +247,183 @@ function Maintenance() {
                 </Typography>
               </CardContent>
             </Card>
-          </Grid>
-        </Grid>
+          </ResponsiveStatsGrid>
+        </ResponsiveSection>
       )}
 
       {/* Filters */}
-      <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} mb={3}>
-        <FormControl fullWidth sx={{ minWidth: 200 }}>
-          <InputLabel>Filter by Flat</InputLabel>
-          <Select
-            value={selectedProperty}
-            label="Filter by Flat"
-            onChange={(e) => {
-              setSelectedProperty(e.target.value);
-              setPage(1);
-            }}
-          >
-            <MenuItem value="">All Flats</MenuItem>
-            {flatProperties.map((property) => (
-              <MenuItem key={property._id} value={property._id}>
-                {property.shopName} - {property.shopNumber}
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
+      <ResponsiveSection>
+        <ResponsiveFilters>
+          <FormControl fullWidth sx={{ minWidth: 200 }}>
+            <InputLabel>Filter by Flat</InputLabel>
+            <Select
+              value={selectedProperty}
+              label="Filter by Flat"
+              onChange={(e) => {
+                setSelectedProperty(e.target.value);
+                setPage(1);
+              }}
+            >
+              <MenuItem value="">All Flats</MenuItem>
+              {flatProperties.map((property) => (
+                <MenuItem key={property._id} value={property._id}>
+                  {property.shopName} - {property.shopNumber}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
 
-        <FormControl fullWidth sx={{ minWidth: 200 }}>
-          <InputLabel>Filter by Maintainer</InputLabel>
-          <Select
-            value={selectedMaintainer}
-            label="Filter by Maintainer"
-            onChange={(e) => {
-              setSelectedMaintainer(e.target.value);
-              setPage(1);
-            }}
-          >
-            <MenuItem value="">All Maintainers</MenuItem>
-            {maintainers.map((maintainer) => (
-              <MenuItem key={maintainer} value={maintainer}>
-                {maintainer}
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
+          <FormControl fullWidth sx={{ minWidth: 200 }}>
+            <InputLabel>Filter by Maintainer</InputLabel>
+            <Select
+              value={selectedMaintainer}
+              label="Filter by Maintainer"
+              onChange={(e) => {
+                setSelectedMaintainer(e.target.value);
+                setPage(1);
+              }}
+            >
+              <MenuItem value="">All Maintainers</MenuItem>
+              {maintainers.map((maintainer) => (
+                <MenuItem key={maintainer} value={maintainer}>
+                  {maintainer}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
 
-        <FormControl fullWidth sx={{ minWidth: 200 }}>
-          <InputLabel>Filter by Status</InputLabel>
-          <Select
-            value={statusFilter}
-            label="Filter by Status"
-            onChange={(e) => {
-              setStatusFilter(e.target.value);
-              setPage(1);
-            }}
-          >
-            <MenuItem value="">All Status</MenuItem>
-            <MenuItem value="paid">Paid</MenuItem>
-            <MenuItem value="pending">Pending</MenuItem>
-          </Select>
-        </FormControl>
-      </Stack>
+          <FormControl fullWidth sx={{ minWidth: 200 }}>
+            <InputLabel>Filter by Status</InputLabel>
+            <Select
+              value={statusFilter}
+              label="Filter by Status"
+              onChange={(e) => {
+                setStatusFilter(e.target.value);
+                setPage(1);
+              }}
+            >
+              <MenuItem value="">All Status</MenuItem>
+              <MenuItem value="paid">Paid</MenuItem>
+              <MenuItem value="pending">Pending</MenuItem>
+            </Select>
+          </FormControl>
+        </ResponsiveFilters>
+      </ResponsiveSection>
 
       {/* Maintenance Records Table */}
-      <Card>
-        <CardContent>
-          <Typography variant="h6" gutterBottom>
-            Maintenance Records
-          </Typography>
-          {loading ? (
-            <Box display="flex" justifyContent="center" p={4}>
-              <CircularProgress />
-            </Box>
-          ) : (
-            <>
-              <TableContainer component={Paper} variant="outlined">
-                <Table>
-                  <TableHead>
-                    <TableRow>
-                      <TableCell>Flat</TableCell>
-                      <TableCell>Maintainer</TableCell>
-                      <TableCell>Activity Date</TableCell>
-                      <TableCell>Paid Date</TableCell>
-                      <TableCell>Amount</TableCell>
-                      <TableCell>Status</TableCell>
-                      <TableCell>Description</TableCell>
-                      <TableCell align="right">Actions</TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {maintenanceRecords.length === 0 ? (
+      <ResponsiveSection>
+        <Card>
+          <CardContent>
+            <Typography variant="h6" gutterBottom>
+              Maintenance Records
+            </Typography>
+            {loading ? (
+              <Box display="flex" justifyContent="center" p={4}>
+                <CircularProgress />
+              </Box>
+            ) : (
+              <>
+                <TableContainer component={Paper} variant="outlined">
+                  <Table>
+                    <TableHead>
                       <TableRow>
-                        <TableCell colSpan={8} align="center">
-                          <Typography color="text.secondary" py={3}>
-                            No maintenance records found
-                          </Typography>
-                        </TableCell>
+                        <TableCell>Flat</TableCell>
+                        <TableCell>Maintainer</TableCell>
+                        <TableCell>Activity Date</TableCell>
+                        <TableCell>Paid Date</TableCell>
+                        <TableCell>Amount</TableCell>
+                        <TableCell>Status</TableCell>
+                        <TableCell>Description</TableCell>
+                        <TableCell align="right">Actions</TableCell>
                       </TableRow>
-                    ) : (
-                      maintenanceRecords.map((record) => (
-                        <TableRow key={record._id} hover>
-                          <TableCell>
-                            {record.property?.shopName || 'N/A'} - {record.property?.shopNumber || 'N/A'}
-                          </TableCell>
-                          <TableCell>{record.maintainer}</TableCell>
-                          <TableCell>
-                            {record.activityDate
-                              ? format(new Date(record.activityDate), 'dd MMM yyyy')
-                              : '-'}
-                          </TableCell>
-                          <TableCell>
-                            {record.paidDate
-                              ? format(new Date(record.paidDate), 'dd MMM yyyy')
-                              : '-'}
-                          </TableCell>
-                          <TableCell>₹{record.amount?.toLocaleString() || 0}</TableCell>
-                          <TableCell>
-                            <Chip
-                              label={record.status || 'pending'}
-                              color={record.status === 'paid' ? 'success' : 'warning'}
-                              size="small"
-                            />
-                          </TableCell>
-                          <TableCell>
-                            <Tooltip title={record.description || 'No description'}>
-                              <Typography
-                                variant="body2"
-                                sx={{
-                                  maxWidth: 200,
-                                  overflow: 'hidden',
-                                  textOverflow: 'ellipsis',
-                                  whiteSpace: 'nowrap',
-                                }}
-                              >
-                                {record.description || '-'}
-                              </Typography>
-                            </Tooltip>
-                          </TableCell>
-                          <TableCell align="right">
-                            <Tooltip title="Edit">
-                              <IconButton size="small" onClick={() => handleEdit(record)}>
-                                <EditIcon fontSize="small" />
-                              </IconButton>
-                            </Tooltip>
-                            <Tooltip title="Delete">
-                              <IconButton
-                                size="small"
-                                color="error"
-                                onClick={() => handleDelete(record._id)}
-                              >
-                                <DeleteIcon fontSize="small" />
-                              </IconButton>
-                            </Tooltip>
+                    </TableHead>
+                    <TableBody>
+                      {maintenanceRecords.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={8} align="center">
+                            <Typography color="text.secondary" py={3}>
+                              No maintenance records found
+                            </Typography>
                           </TableCell>
                         </TableRow>
-                      ))
-                    )}
-                  </TableBody>
-                </Table>
-              </TableContainer>
+                      ) : (
+                        maintenanceRecords.map((record) => (
+                          <TableRow key={record._id} hover>
+                            <TableCell>
+                              {record.property?.shopName || 'N/A'} - {record.property?.shopNumber || 'N/A'}
+                            </TableCell>
+                            <TableCell>{record.maintainer}</TableCell>
+                            <TableCell>
+                              {record.activityDate
+                                ? format(new Date(record.activityDate), 'dd MMM yyyy')
+                                : '-'}
+                            </TableCell>
+                            <TableCell>
+                              {record.paidDate
+                                ? format(new Date(record.paidDate), 'dd MMM yyyy')
+                                : '-'}
+                            </TableCell>
+                            <TableCell>₹{record.amount?.toLocaleString() || 0}</TableCell>
+                            <TableCell>
+                              <Chip
+                                label={record.status || 'pending'}
+                                color={record.status === 'paid' ? 'success' : 'warning'}
+                                size="small"
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <Tooltip title={record.description || 'No description'}>
+                                <Typography
+                                  variant="body2"
+                                  sx={{
+                                    maxWidth: 200,
+                                    overflow: 'hidden',
+                                    textOverflow: 'ellipsis',
+                                    whiteSpace: 'nowrap',
+                                  }}
+                                >
+                                  {record.description || '-'}
+                                </Typography>
+                              </Tooltip>
+                            </TableCell>
+                            <TableCell align="right">
+                              <Tooltip title="Edit">
+                                <IconButton size="small" onClick={() => handleEdit(record)}>
+                                  <EditIcon fontSize="small" />
+                                </IconButton>
+                              </Tooltip>
+                              <Tooltip title="Delete">
+                                <IconButton
+                                  size="small"
+                                  color="error"
+                                  onClick={() => handleDelete(record._id)}
+                                >
+                                  <DeleteIcon fontSize="small" />
+                                </IconButton>
+                              </Tooltip>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      )}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
 
-              {/* Pagination */}
-              {pagination.totalPages > 1 && (
-                <Box display="flex" justifyContent="center" mt={3}>
-                  <Pagination
-                    count={pagination.totalPages}
-                    page={page}
-                    onChange={(e, value) => setPage(value)}
-                  />
-                </Box>
-              )}
-            </>
-          )}
-        </CardContent>
-      </Card>
+                {/* Pagination */}
+                {pagination.totalPages > 1 && (
+                  <Box display="flex" justifyContent="center" mt={3}>
+                    <Pagination
+                      count={pagination.totalPages}
+                      page={page}
+                      onChange={(_, value) => setPage(value)}
+                    />
+                  </Box>
+                )}
+              </>
+            )}
+          </CardContent>
+        </Card>
+      </ResponsiveSection>
 
       {/* Add/Edit Dialog */}
       <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
@@ -466,7 +469,7 @@ function Maintenance() {
               label="Activity Date"
               name="activityDate"
               type="date"
-              InputLabelProps={{ shrink: true }}
+              slotProps={{ inputLabel: { shrink: true } }}
               value={formik.values.activityDate}
               onChange={formik.handleChange}
               onBlur={formik.handleBlur}
@@ -480,7 +483,7 @@ function Maintenance() {
               label="Paid Date (Optional)"
               name="paidDate"
               type="date"
-              InputLabelProps={{ shrink: true }}
+              slotProps={{ inputLabel: { shrink: true } }}
               value={formik.values.paidDate}
               onChange={(e) => {
                 formik.setFieldValue('paidDate', e.target.value);
@@ -530,7 +533,7 @@ function Maintenance() {
           </DialogActions>
         </form>
       </Dialog>
-    </Box>
+    </ResponsivePageLayout>
   );
 }
 

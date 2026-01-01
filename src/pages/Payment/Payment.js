@@ -1,9 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import {
   Box,
   Typography,
-  Grid,
   Card,
   CardContent,
   TextField,
@@ -20,6 +19,11 @@ import { useFormik } from 'formik';
 import * as Yup from 'yup';
 import { fetchProperties } from '../../store/slices/propertySlice';
 import { makePayment, getPayments } from '../../store/slices/paymentSlice';
+import ResponsivePageLayout, { 
+  ResponsiveHeader, 
+  ResponsiveSection,
+  ResponsiveFormGrid
+} from '../../components/Layout/ResponsivePageLayout';
 
 const validationSchema = Yup.object({
   propertyId: Yup.string().required('Property is required'),
@@ -166,199 +170,196 @@ function PaymentsPage() {
   // --------------------------------------------------------
 
   return (
-    <Box p={3}>
-      <Typography variant="h4" gutterBottom>
-        Property Payments
-      </Typography>
+    <ResponsivePageLayout>
+      <ResponsiveHeader>
+        <Box>
+          <Typography variant="h4">
+            Property Payments
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            Record and manage property payments
+          </Typography>
+        </Box>
+      </ResponsiveHeader>
 
       {/* Payment Form */}
-      <Card sx={{ mb: 3 }}>
-       <CardContent>
-  <form onSubmit={paymentFormik.handleSubmit}>
-    <Grid container spacing={2}>
+      <ResponsiveSection>
+        <Card>
+          <CardContent>
+            <form onSubmit={paymentFormik.handleSubmit}>
+              <ResponsiveFormGrid columns={{ xs: 1, sm: 2, md: 3 }}>
+                {/* Property */}
+                <TextField
+                  select
+                  fullWidth
+                  label="Property"
+                  name="propertyId"
+                  value={paymentFormik.values.propertyId}
+                  onChange={(e) => handlePropertyChange(e.target.value)}
+                  onBlur={paymentFormik.handleBlur}
+                  error={paymentFormik.touched.propertyId && Boolean(paymentFormik.errors.propertyId)}
+                  helperText={paymentFormik.touched.propertyId && paymentFormik.errors.propertyId}
+                  sx={{ gridColumn: { sm: '1 / -1', md: '1 / 3' } }}
+                >
+                  {properties.map((p) => (
+                    <MenuItem key={p._id} value={p._id}>
+                      {p.shopName} - {p.location}
+                    </MenuItem>
+                  ))}
+                </TextField>
 
-      {/* Property */}
-      <Grid item xs={12} md={6}>
-        <TextField
-          select
-          fullWidth
-          label="Property"
-          name="propertyId"
-          value={paymentFormik.values.propertyId}
-          onChange={(e) => handlePropertyChange(e.target.value)}
-          onBlur={paymentFormik.handleBlur}
-          error={paymentFormik.touched.propertyId && Boolean(paymentFormik.errors.propertyId)}
-          helperText={paymentFormik.touched.propertyId && paymentFormik.errors.propertyId}
-        >
-          {properties.map((p) => (
-            <MenuItem key={p._id} value={p._id}>
-              {p.shopName} - {p.location}
-            </MenuItem>
-          ))}
-        </TextField>
-      </Grid>
+                {/* Tenant */}
+                <TextField
+                  fullWidth
+                  label="Tenant"
+                  value={selectedProperty?.tenant?.name || ''}
+                  disabled
+                />
 
-      {/* Tenant */}
-      <Grid item xs={12} md={6}>
-        <TextField
-          fullWidth
-          label="Tenant"
-          value={selectedProperty?.tenant?.name || ''}
-          disabled
-        />
-      </Grid>
+                {/* Payment Type */}
+                <TextField
+                  select
+                  fullWidth
+                  label="Type"
+                  name="type"
+                  value={paymentFormik.values.type}
+                  onChange={paymentFormik.handleChange}
+                  onBlur={paymentFormik.handleBlur}
+                  error={paymentFormik.touched.type && Boolean(paymentFormik.errors.type)}
+                  helperText={paymentFormik.touched.type && paymentFormik.errors.type}
+                >
+                  <MenuItem value="rent">Rent</MenuItem>
+                  <MenuItem value="maintenance">Maintenance</MenuItem>
+                  <MenuItem value="light">Light</MenuItem>
+                  <MenuItem value="advance">Advance</MenuItem>
+                </TextField>
 
-      {/* Payment Type */}
-      <Grid item xs={12} md={4}>
-        <TextField
-          select
-          fullWidth
-          label="Type"
-          name="type"
-          value={paymentFormik.values.type}
-          onChange={paymentFormik.handleChange}
-          onBlur={paymentFormik.handleBlur}
-          error={paymentFormik.touched.type && Boolean(paymentFormik.errors.type)}
-          helperText={paymentFormik.touched.type && paymentFormik.errors.type}
-        >
-          <MenuItem value="rent">Rent</MenuItem>
-          <MenuItem value="maintenance">Maintenance</MenuItem>
-          <MenuItem value="light">Light</MenuItem>
-          <MenuItem value="advance">Advance</MenuItem>
-        </TextField>
-      </Grid>
+                {/* Month */}
+                <TextField
+                  select
+                  fullWidth
+                  label="Month"
+                  name="rentMonth"
+                  value={paymentFormik.values.rentMonth}
+                  onChange={paymentFormik.handleChange}
+                  onBlur={paymentFormik.handleBlur}
+                  error={paymentFormik.touched.rentMonth && Boolean(paymentFormik.errors.rentMonth)}
+                  helperText={paymentFormik.touched.rentMonth && paymentFormik.errors.rentMonth}
+                >
+                  {monthNames.map((month, index) => (
+                    <MenuItem key={month} value={index + 1}>
+                      {month}
+                    </MenuItem>
+                  ))}
+                </TextField>
 
-      {/* Month */}
-      <Grid item xs={12} md={4}>
-        <TextField
-          select
-          fullWidth
-          label="Month"
-          name="rentMonth"
-          value={paymentFormik.values.rentMonth}
-          onChange={paymentFormik.handleChange}
-          onBlur={paymentFormik.handleBlur}
-          error={paymentFormik.touched.rentMonth && Boolean(paymentFormik.errors.rentMonth)}
-          helperText={paymentFormik.touched.rentMonth && paymentFormik.errors.rentMonth}
-        >
-          {monthNames.map((month, index) => (
-            <MenuItem key={month} value={index + 1}>
-              {month}
-            </MenuItem>
-          ))}
-        </TextField>
-      </Grid>
+                {/* Amount */}
+                <TextField
+                  fullWidth
+                  type="number"
+                  label="Amount"
+                  name="amount"
+                  value={paymentFormik.values.amount}
+                  onChange={paymentFormik.handleChange}
+                  onBlur={paymentFormik.handleBlur}
+                  error={paymentFormik.touched.amount && Boolean(paymentFormik.errors.amount)}
+                  helperText={paymentFormik.touched.amount && paymentFormik.errors.amount}
+                />
 
-      {/* Amount */}
-      <Grid item xs={12} md={4}>
-        <TextField
-          fullWidth
-          type="number"
-          label="Amount"
-          name="amount"
-          value={paymentFormik.values.amount}
-          onChange={paymentFormik.handleChange}
-          onBlur={paymentFormik.handleBlur}
-          error={paymentFormik.touched.amount && Boolean(paymentFormik.errors.amount)}
-          helperText={paymentFormik.touched.amount && paymentFormik.errors.amount}
-        />
-      </Grid>
+                {/* Paid On */}
+                <TextField
+                  fullWidth
+                  type="date"
+                  label="Paid On"
+                  name="paidOn"
+                  slotProps={{ inputLabel: { shrink: true } }}
+                  value={paymentFormik.values.paidOn}
+                  onChange={paymentFormik.handleChange}
+                  onBlur={paymentFormik.handleBlur}
+                  error={paymentFormik.touched.paidOn && Boolean(paymentFormik.errors.paidOn)}
+                  helperText={paymentFormik.touched.paidOn && paymentFormik.errors.paidOn}
+                />
 
-      {/* Paid On */}
-      <Grid item xs={12} md={4}>
-        <TextField
-          fullWidth
-          type="date"
-          label="Paid On"
-          name="paidOn"
-          InputLabelProps={{ shrink: true }}
-          value={paymentFormik.values.paidOn}
-          onChange={paymentFormik.handleChange}
-          onBlur={paymentFormik.handleBlur}
-          error={paymentFormik.touched.paidOn && Boolean(paymentFormik.errors.paidOn)}
-          helperText={paymentFormik.touched.paidOn && paymentFormik.errors.paidOn}
-        />
-      </Grid>
-
-      {/* Submit */}
-      <Grid item xs={12}>
-        <Button
-          type="submit"
-          variant="contained"
-          disabled={!paymentFormik.isValid || paymentFormik.isSubmitting}
-        >
-          Make Payment
-        </Button>
-      </Grid>
-
-    </Grid>
-  </form>
-</CardContent>
-
-      </Card>
+                {/* Submit */}
+                <Box sx={{ gridColumn: '1 / -1', mt: 2 }}>
+                  <Button
+                    type="submit"
+                    variant="contained"
+                    disabled={!paymentFormik.isValid || paymentFormik.isSubmitting}
+                  >
+                    Make Payment
+                  </Button>
+                </Box>
+              </ResponsiveFormGrid>
+            </form>
+          </CardContent>
+        </Card>
+      </ResponsiveSection>
 
       {/* Yearly Summary */}
       {selectedProperty && monthlySummary.length > 0 && (
-        <Card>
-          <CardContent>
-            <Typography variant="h6">Yearly Payment Summary ({year})</Typography>
+        <ResponsiveSection>
+          <Card>
+            <CardContent>
+              <Typography variant="h6">Yearly Payment Summary ({year})</Typography>
 
-            <Paper>
-              <Table>
-                <TableHead>
-                  <TableRow>
-                    <TableCell>Month</TableCell>
-                    <TableCell>Rent</TableCell>
-                    <TableCell>Maintenance</TableCell>
-                    <TableCell>Light</TableCell>
-                  </TableRow>
-                </TableHead>
+              <Paper>
+                <Table>
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>Month</TableCell>
+                      <TableCell>Rent</TableCell>
+                      <TableCell>Maintenance</TableCell>
+                      <TableCell>Light</TableCell>
+                    </TableRow>
+                  </TableHead>
 
-                <TableBody>
-                  {[...monthlySummary]
-                    .sort((a, b) => monthNames.indexOf(b.month) - monthNames.indexOf(a.month))
-                    .map((m) => (
-                      <TableRow
-                        key={m.month}
-                        sx={{
-                          backgroundColor:
-                            m.rentPending || m.maintenancePending || m.lightPending
-                              ? '#ffebee'
-                              : '#e8f5e9',
-                        }}
-                      >
-                        <TableCell>{m.month}</TableCell>
-                        <TableCell sx={{ color: m.rentPending ? 'red' : 'green' }}>
-                          ₹{m.rentPaid} / ₹{m.rentPending}
-                        </TableCell>
-                        <TableCell sx={{ color: m.maintenancePending ? 'red' : 'green' }}>
-                          ₹{m.maintenancePaid} / ₹{m.maintenancePending}
-                        </TableCell>
-                        <TableCell sx={{ color: m.lightPending ? 'red' : 'green' }}>
-                          ₹{m.lightPaid} / ₹{m.lightPending}
-                        </TableCell>
-                      </TableRow>
-                    ))}
+                  <TableBody>
+                    {[...monthlySummary]
+                      .sort((a, b) => monthNames.indexOf(b.month) - monthNames.indexOf(a.month))
+                      .map((m) => (
+                        <TableRow
+                          key={m.month}
+                          sx={{
+                            backgroundColor:
+                              m.rentPending || m.maintenancePending || m.lightPending
+                                ? '#ffebee'
+                                : '#e8f5e9',
+                          }}
+                        >
+                          <TableCell>{m.month}</TableCell>
+                          <TableCell sx={{ color: m.rentPending ? 'red' : 'green' }}>
+                            ₹{m.rentPaid} / ₹{m.rentPending}
+                          </TableCell>
+                          <TableCell sx={{ color: m.maintenancePending ? 'red' : 'green' }}>
+                            ₹{m.maintenancePaid} / ₹{m.maintenancePending}
+                          </TableCell>
+                          <TableCell sx={{ color: m.lightPending ? 'red' : 'green' }}>
+                            ₹{m.lightPaid} / ₹{m.lightPending}
+                          </TableCell>
+                        </TableRow>
+                      ))}
 
-                  {/* Outstanding Summary */}
-                  <TableRow
-                    sx={{
-                      backgroundColor: hasOutstanding ? '#ffcdd2' : '#c8e6c9',
-                      fontWeight: 'bold',
-                    }}
-                  >
-                    <TableCell>Outstanding Summary</TableCell>
-                    <TableCell>{outstandingSummary.rent || 'No'} Month(s)</TableCell>
-                    <TableCell>{outstandingSummary.maintenance || 'No'} Month(s)</TableCell>
-                    <TableCell>{outstandingSummary.light || 'No'} Month(s)</TableCell>
-                  </TableRow>
-                </TableBody>
-              </Table>
-            </Paper>
-          </CardContent>
-        </Card>
+                    {/* Outstanding Summary */}
+                    <TableRow
+                      sx={{
+                        backgroundColor: hasOutstanding ? '#ffcdd2' : '#c8e6c9',
+                        fontWeight: 'bold',
+                      }}
+                    >
+                      <TableCell>Outstanding Summary</TableCell>
+                      <TableCell>{outstandingSummary.rent || 'No'} Month(s)</TableCell>
+                      <TableCell>{outstandingSummary.maintenance || 'No'} Month(s)</TableCell>
+                      <TableCell>{outstandingSummary.light || 'No'} Month(s)</TableCell>
+                    </TableRow>
+                  </TableBody>
+                </Table>
+              </Paper>
+            </CardContent>
+          </Card>
+        </ResponsiveSection>
       )}
-    </Box>
+    </ResponsivePageLayout>
   );
 }
 

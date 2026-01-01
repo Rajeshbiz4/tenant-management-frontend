@@ -170,7 +170,7 @@ function Layout({ children }) {
             </Avatar>
           </IconButton>
           <Menu anchorEl={anchorEl} open={Boolean(anchorEl)} onClose={handleMenuClose}>
-            <MenuItem onClick={handleMenuClose}>
+            <MenuItem onClick={() => { navigate('/profile'); handleMenuClose(); }}>
               <AccountCircleIcon sx={{ mr: 1 }} />
               Profile
             </MenuItem>

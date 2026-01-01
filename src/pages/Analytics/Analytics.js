@@ -1,10 +1,9 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import {
   Box,
   Card,
   CardContent,
-  Grid,
   Typography,
   TextField,
   MenuItem,
@@ -28,6 +27,13 @@ import {
 } from '@mui/icons-material';
 import { fetchAnalytics } from '../../store/slices/statsSlice';
 import { fetchProperties } from '../../store/slices/propertySlice';
+import ResponsivePageLayout, { 
+  ResponsiveHeader, 
+  ResponsiveFilters,
+  ResponsiveStatsGrid,
+  ResponsiveTwoColumn,
+  ResponsiveSection
+} from '../../components/Layout/ResponsivePageLayout';
 
 const monthNames = [
   'January', 'February', 'March', 'April', 'May', 'June',
@@ -46,6 +52,13 @@ function Analytics() {
 
   useEffect(() => {
     dispatch(fetchProperties({ page: 1, limit: 100 }));
+    
+    // Debug authentication
+    const token = localStorage.getItem('token');
+    console.log('Analytics: Auth token exists:', !!token);
+    if (!token) {
+      console.error('Analytics: No auth token found');
+    }
   }, [dispatch]);
 
   useEffect(() => {
@@ -53,6 +66,8 @@ function Analytics() {
     if (selectedYear) filters.year = selectedYear;
     if (selectedMonth) filters.month = selectedMonth;
     if (selectedProperty) filters.propertyId = selectedProperty;
+    
+    console.log('Analytics: Fetching with filters:', filters);
     dispatch(fetchAnalytics(filters));
   }, [dispatch, selectedYear, selectedMonth, selectedProperty]);
 
@@ -60,9 +75,34 @@ function Analytics() {
 
   if (loading && !analytics) {
     return (
-      <Box display="flex" justifyContent="center" p={4}>
-        <CircularProgress />
-      </Box>
+      <ResponsivePageLayout>
+        <Box display="flex" justifyContent="center" p={4}>
+          <CircularProgress />
+        </Box>
+      </ResponsivePageLayout>
+    );
+  }
+
+  if (error) {
+    return (
+      <ResponsivePageLayout>
+        <Card>
+          <CardContent>
+            <Typography variant="h6" color="error" gutterBottom>
+              Error Loading Analytics
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              {error}
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
+              Please check:
+              <br />• Backend server is running on port 8080
+              <br />• You are logged in properly
+              <br />• You have properties and data in the system
+            </Typography>
+          </CardContent>
+        </Card>
+      </ResponsivePageLayout>
     );
   }
 
@@ -71,6 +111,15 @@ function Analytics() {
   const pendingRent = analytics?.pendingRent || { total: 0, count: 0, details: [] };
   const netAmount = analytics?.netAmount || 0;
   const profitMargin = analytics?.profitMargin || 0;
+
+  console.log('Analytics: Current state:', { 
+    loading, 
+    error, 
+    analytics, 
+    earnings, 
+    spends, 
+    pendingRent 
+  });
 
   const summaryCards = [
     {
@@ -108,71 +157,81 @@ function Analytics() {
   ];
 
   return (
-    <Box>
+    <ResponsivePageLayout>
       {/* Header with Filters */}
-      <Card sx={{ mb: 3 }}>
-        <CardContent>
-          <Typography variant="h5" gutterBottom>
-            Financial Analytics
-          </Typography>
-          {error && (
-            <Typography variant="body2" color="error" gutterBottom>
-              Error: {error}
+      <ResponsiveSection>
+        <Card>
+          <CardContent>
+            <Typography variant="h5" gutterBottom>
+              Financial Analytics
             </Typography>
-          )}
-          <Typography variant="body2" color="text.secondary" gutterBottom>
-            {analytics?.period?.monthName || monthNames[selectedMonth - 1]} {analytics?.period?.year || selectedYear}
-          </Typography>
-          <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} mt={2}>
-            <TextField
-              select
-              label="Year"
-              value={selectedYear}
-              onChange={(e) => setSelectedYear(e.target.value)}
-              sx={{ minWidth: 150 }}
-            >
-              {Array.from({ length: 5 }, (_, i) => currentDate.getFullYear() - i).map((year) => (
-                <MenuItem key={year} value={year}>
-                  {year}
-                </MenuItem>
-              ))}
-            </TextField>
-            <TextField
-              select
-              label="Month"
-              value={selectedMonth}
-              onChange={(e) => setSelectedMonth(e.target.value)}
-              sx={{ minWidth: 200 }}
-            >
-              {monthNames.map((month, index) => (
-                <MenuItem key={month} value={index + 1}>
-                  {month}
-                </MenuItem>
-              ))}
-            </TextField>
-            <TextField
-              select
-              label="Property (Optional)"
-              value={selectedProperty}
-              onChange={(e) => setSelectedProperty(e.target.value)}
-              sx={{ minWidth: 250 }}
-            >
-              <MenuItem value="">All Properties</MenuItem>
-              {properties.map((property) => (
-                <MenuItem key={property._id} value={property._id}>
-                  {property.shopName} - {property.shopNumber}
-                </MenuItem>
-              ))}
-            </TextField>
-          </Stack>
-        </CardContent>
-      </Card>
+            {error && (
+              <Typography variant="body2" color="error" gutterBottom>
+                Error: {error}
+              </Typography>
+            )}
+            <Typography variant="body2" color="text.secondary" gutterBottom>
+              {analytics?.period?.monthName || monthNames[selectedMonth - 1]} {analytics?.period?.year || selectedYear}
+            </Typography>
+            {!analytics && (
+              <Typography variant="body2" color="warning.main" gutterBottom>
+                No analytics data available. This could mean:
+                <br />• No payment or maintenance records exist
+                <br />• Backend server connection issue
+                <br />• Authentication problem
+              </Typography>
+            )}
+            <ResponsiveFilters>
+              <TextField
+                select
+                label="Year"
+                value={selectedYear}
+                onChange={(e) => setSelectedYear(e.target.value)}
+                sx={{ minWidth: 150 }}
+              >
+                {Array.from({ length: 5 }, (_, i) => currentDate.getFullYear() - i).map((year) => (
+                  <MenuItem key={year} value={year}>
+                    {year}
+                  </MenuItem>
+                ))}
+              </TextField>
+              <TextField
+                select
+                label="Month"
+                value={selectedMonth}
+                onChange={(e) => setSelectedMonth(e.target.value)}
+                sx={{ minWidth: 200 }}
+              >
+                {monthNames.map((month, index) => (
+                  <MenuItem key={month} value={index + 1}>
+                    {month}
+                  </MenuItem>
+                ))}
+              </TextField>
+              <TextField
+                select
+                label="Property (Optional)"
+                value={selectedProperty}
+                onChange={(e) => setSelectedProperty(e.target.value)}
+                sx={{ minWidth: 250 }}
+              >
+                <MenuItem value="">All Properties</MenuItem>
+                {properties.map((property) => (
+                  <MenuItem key={property._id} value={property._id}>
+                    {property.shopName} - {property.shopNumber}
+                  </MenuItem>
+                ))}
+              </TextField>
+            </ResponsiveFilters>
+          </CardContent>
+        </Card>
+      </ResponsiveSection>
 
       {/* Summary Cards */}
-      <Grid container spacing={3} sx={{ mb: 3 }}>
-        {summaryCards.map((card) => (
-          <Grid item xs={12} sm={6} md={3} key={card.title}>
-            <Card sx={{ bgcolor: card.color, color: '#fff', height: '100%' }}>
+      <ResponsiveSection>
+        <ResponsiveStatsGrid>
+          {summaryCards.map((card) => (
+            <Card key={card.title} sx={{ bgcolor: card.color, color: '#fff', height: '100%' }}>
               <CardContent>
                 <Stack direction="row" spacing={2} alignItems="center">
                   <Box
@@ -201,148 +260,147 @@ function Analytics() {
                 </Stack>
               </CardContent>
             </Card>
-          </Grid>
-        ))}
-      </Grid>
+          ))}
+        </ResponsiveStatsGrid>
+      </ResponsiveSection>
 
       {/* Detailed Breakdown */}
-      <Grid container spacing={3}>
-        {/* Earnings Breakdown */}
-        <Grid item xs={12} md={6}>
-          <Card>
-            <CardContent>
-              <Stack direction="row" spacing={1} alignItems="center" mb={2}>
-                <TrendingUpIcon color="success" />
-                <Typography variant="h6">Earnings Breakdown</Typography>
-              </Stack>
-              <Divider sx={{ mb: 2 }} />
-              <Stack spacing={2}>
-                <Box display="flex" justifyContent="space-between" alignItems="center">
-                  <Typography variant="body1">Rent</Typography>
-                  <Typography variant="h6" color="success.main">
-                    {currency(earnings.byType?.rent || 0)}
-                  </Typography>
-                </Box>
-                <Box display="flex" justifyContent="space-between" alignItems="center">
-                  <Typography variant="body1">Maintenance</Typography>
-                  <Typography variant="h6" color="success.main">
-                    {currency(earnings.byType?.maintenance || 0)}
-                  </Typography>
-                </Box>
-                <Box display="flex" justifyContent="space-between" alignItems="center">
-                  <Typography variant="body1">Light Bill</Typography>
-                  <Typography variant="h6" color="success.main">
-                    {currency(earnings.byType?.light || 0)}
-                  </Typography>
-                </Box>
-                <Box display="flex" justifyContent="space-between" alignItems="center">
-                  <Typography variant="body1">Advance</Typography>
-                  <Typography variant="h6" color="success.main">
-                    {currency(earnings.byType?.advance || 0)}
-                  </Typography>
-                </Box>
-                <Divider />
-                <Box display="flex" justifyContent="space-between" alignItems="center">
-                  <Typography variant="h6" fontWeight="bold">
-                    Total Earnings
-                  </Typography>
-                  <Typography variant="h5" fontWeight="bold" color="success.main">
-                    {currency(earnings.total)}
-                  </Typography>
-                </Box>
-              </Stack>
-            </CardContent>
-          </Card>
-        </Grid>
-
-        {/* Spends Breakdown */}
-        <Grid item xs={12} md={6}>
-          <Card>
-            <CardContent>
-              <Stack direction="row" spacing={1} alignItems="center" mb={2}>
-                <BuildIcon color="error" />
-                <Typography variant="h6">Spends Breakdown</Typography>
-              </Stack>
-              <Divider sx={{ mb: 2 }} />
-              <Stack spacing={2}>
-                <Box display="flex" justifyContent="space-between" alignItems="center">
-                  <Typography variant="body1">Paid</Typography>
-                  <Typography variant="h6" color="success.main">
-                    {currency(spends.paid || 0)}
-                  </Typography>
-                </Box>
-                <Box display="flex" justifyContent="space-between" alignItems="center">
-                  <Typography variant="body1">Pending</Typography>
-                  <Typography variant="h6" color="warning.main">
-                    {currency(spends.pending || 0)}
-                  </Typography>
-                </Box>
-                <Divider />
-                <Box display="flex" justifyContent="space-between" alignItems="center">
-                  <Typography variant="h6" fontWeight="bold">
-                    Total Spends
-                  </Typography>
-                  <Typography variant="h5" fontWeight="bold" color="error.main">
-                    {currency(spends.total)}
-                  </Typography>
-                </Box>
-              </Stack>
-            </CardContent>
-          </Card>
-        </Grid>
-
-        {/* Pending Rent Details */}
-        {pendingRent.details && pendingRent.details.length > 0 && (
-          <Grid item xs={12}>
-            <Card>
+      <ResponsiveSection>
+        <ResponsiveTwoColumn
+          left={
+            <Card sx={{ height: '100%' }}>
               <CardContent>
                 <Stack direction="row" spacing={1} alignItems="center" mb={2}>
-                  <PendingIcon color="warning" />
-                  <Typography variant="h6">Pending Rent Details</Typography>
+                  <TrendingUpIcon color="success" />
+                  <Typography variant="h6">Earnings Breakdown</Typography>
                 </Stack>
                 <Divider sx={{ mb: 2 }} />
-                <Table size="small">
-                  <TableHead>
-                    <TableRow>
-                      <TableCell>Property</TableCell>
-                      <TableCell>Property Number</TableCell>
-                      <TableCell>Tenant</TableCell>
-                      <TableCell align="right">Amount</TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {pendingRent.details.map((detail, index) => (
-                      <TableRow key={index}>
-                        <TableCell>{detail.property}</TableCell>
-                        <TableCell>{detail.propertyNumber}</TableCell>
-                        <TableCell>{detail.tenant}</TableCell>
-                        <TableCell align="right">
-                          <Typography variant="body1" fontWeight="bold" color="warning.main">
-                            {currency(detail.amount)}
-                          </Typography>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                    <TableRow sx={{ bgcolor: 'warning.light' }}>
-                      <TableCell colSpan={3} align="right">
-                        <Typography variant="h6" fontWeight="bold">
-                          Total Pending:
-                        </Typography>
-                      </TableCell>
-                      <TableCell align="right">
-                        <Typography variant="h6" fontWeight="bold" color="warning.dark">
-                          {currency(pendingRent.total)}
-                        </Typography>
-                      </TableCell>
-                    </TableRow>
-                  </TableBody>
-                </Table>
+                <Stack spacing={2}>
+                  <Box display="flex" justifyContent="space-between" alignItems="center">
+                    <Typography variant="body1">Rent</Typography>
+                    <Typography variant="h6" color="success.main">
+                      {currency(earnings.byType?.rent || 0)}
+                    </Typography>
+                  </Box>
+                  <Box display="flex" justifyContent="space-between" alignItems="center">
+                    <Typography variant="body1">Maintenance</Typography>
+                    <Typography variant="h6" color="success.main">
+                      {currency(earnings.byType?.maintenance || 0)}
+                    </Typography>
+                  </Box>
+                  <Box display="flex" justifyContent="space-between" alignItems="center">
+                    <Typography variant="body1">Light Bill</Typography>
+                    <Typography variant="h6" color="success.main">
+                      {currency(earnings.byType?.light || 0)}
+                    </Typography>
+                  </Box>
+                  <Box display="flex" justifyContent="space-between" alignItems="center">
+                    <Typography variant="body1">Advance</Typography>
+                    <Typography variant="h6" color="success.main">
+                      {currency(earnings.byType?.advance || 0)}
+                    </Typography>
+                  </Box>
+                  <Divider />
+                  <Box display="flex" justifyContent="space-between" alignItems="center">
+                    <Typography variant="h6" fontWeight="bold">
+                      Total Earnings
+                    </Typography>
+                    <Typography variant="h5" fontWeight="bold" color="success.main">
+                      {currency(earnings.total)}
+                    </Typography>
+                  </Box>
+                </Stack>
               </CardContent>
             </Card>
-          </Grid>
-        )}
-      </Grid>
-    </Box>
+          }
+          right={
+            <Card sx={{ height: '100%' }}>
+              <CardContent>
+                <Stack direction="row" spacing={1} alignItems="center" mb={2}>
+                  <BuildIcon color="error" />
+                  <Typography variant="h6">Spends Breakdown</Typography>
+                </Stack>
+                <Divider sx={{ mb: 2 }} />
+                <Stack spacing={2}>
+                  <Box display="flex" justifyContent="space-between" alignItems="center">
+                    <Typography variant="body1">Paid</Typography>
+                    <Typography variant="h6" color="success.main">
+                      {currency(spends.paid || 0)}
+                    </Typography>
+                  </Box>
+                  <Box display="flex" justifyContent="space-between" alignItems="center">
+                    <Typography variant="body1">Pending</Typography>
+                    <Typography variant="h6" color="warning.main">
+                      {currency(spends.pending || 0)}
+                    </Typography>
+                  </Box>
+                  <Divider />
+                  <Box display="flex" justifyContent="space-between" alignItems="center">
+                    <Typography variant="h6" fontWeight="bold">
+                      Total Spends
+                    </Typography>
+                    <Typography variant="h5" fontWeight="bold" color="error.main">
+                      {currency(spends.total)}
+                    </Typography>
+                  </Box>
+                </Stack>
+              </CardContent>
+            </Card>
+          }
+        />
+      </ResponsiveSection>
+
+      {/* Pending Rent Details */}
+      {pendingRent.details && pendingRent.details.length > 0 && (
+        <ResponsiveSection>
+          <Card>
+            <CardContent>
+              <Stack direction="row" spacing={1} alignItems="center" mb={2}>
+                <PendingIcon color="warning" />
+                <Typography variant="h6">Pending Rent Details</Typography>
+              </Stack>
+              <Divider sx={{ mb: 2 }} />
+              <Table size="small">
+                <TableHead>
+                  <TableRow>
+                    <TableCell>Property</TableCell>
+                    <TableCell>Property Number</TableCell>
+                    <TableCell>Tenant</TableCell>
+                    <TableCell align="right">Amount</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {pendingRent.details.map((detail, index) => (
+                    <TableRow key={index}>
+                      <TableCell>{detail.property}</TableCell>
+                      <TableCell>{detail.propertyNumber}</TableCell>
+                      <TableCell>{detail.tenant}</TableCell>
+                      <TableCell align="right">
+                        <Typography variant="body1" fontWeight="bold" color="warning.main">
+                          {currency(detail.amount)}
+                        </Typography>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                  <TableRow sx={{ bgcolor: 'warning.light' }}>
+                    <TableCell colSpan={3} align="right">
+                      <Typography variant="h6" fontWeight="bold">
+                        Total Pending:
+                      </Typography>
+                    </TableCell>
+                    <TableCell align="right">
+                      <Typography variant="h6" fontWeight="bold" color="warning.dark">
+                        {currency(pendingRent.total)}
+                      </Typography>
+                    </TableCell>
+                  </TableRow>
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </ResponsiveSection>
+      )}
+    </ResponsivePageLayout>
   );
 }
 

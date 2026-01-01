@@ -1,10 +1,9 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import {
   Box,
   Card,
   CardContent,
-  Grid,
   MenuItem,
   TextField,
   Typography,
@@ -20,6 +19,12 @@ import {
 import { Add as AddIcon } from '@mui/icons-material';
 import { fetchProperties } from '../../store/slices/propertySlice';
 import { getPayments, clearPayments } from '../../store/slices/paymentSlice';
+import ResponsivePageLayout, { 
+  ResponsiveHeader, 
+  ResponsiveFilters,
+  ResponsiveSection,
+  ResponsiveFormGrid
+} from '../../components/Layout/ResponsivePageLayout';
 
 const monthNames = [
   'January','February','March','April','May','June',
@@ -92,184 +97,206 @@ function PaymentHistoryPage() {
   }, [filteredPayments]);
 
   return (
-    <Box p={3}>
-      <Typography variant="h4" gutterBottom>
-        Payment History
-      </Typography>
+    <ResponsivePageLayout>
+      <ResponsiveHeader>
+        <Box>
+          <Typography variant="h4">
+            Payment History
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            View and track all payment records
+          </Typography>
+        </Box>
+      </ResponsiveHeader>
 
       {/* Show message if user has no properties */}
       {properties.length === 0 && (
-        <Card sx={{ mb: 3, bgcolor: 'info.light' }}>
-          <CardContent>
-            <Typography variant="h6" gutterBottom>
-              No Properties Found
-            </Typography>
-            <Typography variant="body2" color="text.secondary" paragraph>
-              You need to add properties first before you can view payment history.
-            </Typography>
-            <Button
-              variant="contained"
-              startIcon={<AddIcon />}
-              onClick={() => window.location.href = '/properties'}
-            >
-              Add Your First Property
-            </Button>
-          </CardContent>
-        </Card>
+        <ResponsiveSection>
+          <Card sx={{ bgcolor: 'info.light' }}>
+            <CardContent>
+              <Typography variant="h6" gutterBottom>
+                No Properties Found
+              </Typography>
+              <Typography variant="body2" color="text.secondary" paragraph>
+                You need to add properties first before you can view payment history.
+              </Typography>
+              <Button
+                variant="contained"
+                startIcon={<AddIcon />}
+                onClick={() => window.location.href = '/properties'}
+              >
+                Add Your First Property
+              </Button>
+            </CardContent>
+          </Card>
+        </ResponsiveSection>
       )}
 
       {/* ================= FILTERS ================= */}
       {properties.length > 0 && (
-        <Card sx={{ mb: 3 }}>
-        <CardContent>
-          <Grid container spacing={2}>
-            <Grid item xs={12} md={3}>
-              <TextField
-                select
-                fullWidth
-                label="Property"
-                value={propertyId}
-                onChange={(e) => {
-                  setPropertyId(e.target.value);
-                  setTenantId(''); // Reset tenant when property changes
-                }}
-              >
-                <MenuItem value="">All</MenuItem>
-                {properties.map((p) => (
-                  <MenuItem key={p._id} value={p._id}>
-                    {p.shopName} - {p.location}
-                  </MenuItem>
-                ))}
-              </TextField>
-            </Grid>
+        <ResponsiveSection>
+          <Card>
+            <CardContent>
+              <ResponsiveFormGrid columns={{ xs: 1, sm: 2, md: 4 }}>
+                <TextField
+                  select
+                  fullWidth
+                  label="Property"
+                  value={propertyId}
+                  onChange={(e) => {
+                    setPropertyId(e.target.value);
+                    setTenantId(''); // Reset tenant when property changes
+                  }}
+                >
+                  <MenuItem value="">All</MenuItem>
+                  {properties.map((p) => (
+                    <MenuItem key={p._id} value={p._id}>
+                      {p.shopName} - {p.location}
+                    </MenuItem>
+                  ))}
+                </TextField>
 
-            <Grid item xs={12} md={3}>
-              <TextField
-                select
-                fullWidth
-                label="Tenant"
-                value={tenantId}
-                onChange={(e) => setTenantId(e.target.value)}
-                disabled={!tenants.length}
-              >
-                <MenuItem value="">All</MenuItem>
-                {tenants.map((t) => (
-                  <MenuItem key={t._id} value={t._id}>
-                    {t.name}
-                  </MenuItem>
-                ))}
-              </TextField>
-            </Grid>
+                <TextField
+                  select
+                  fullWidth
+                  label="Tenant"
+                  value={tenantId}
+                  onChange={(e) => setTenantId(e.target.value)}
+                  disabled={!tenants.length}
+                >
+                  <MenuItem value="">All</MenuItem>
+                  {tenants.map((t) => (
+                    <MenuItem key={t._id} value={t._id}>
+                      {t.name}
+                    </MenuItem>
+                  ))}
+                </TextField>
 
-            <Grid item xs={12} md={3}>
-              <TextField
-                select
-                fullWidth
-                label="Year"
-                value={year}
-                onChange={(e) => setYear(Number(e.target.value))}
-              >
-                {[year - 1, year, year + 1].map((y) => (
-                  <MenuItem key={y} value={y}>
-                    {y}
-                  </MenuItem>
-                ))}
-              </TextField>
-            </Grid>
+                <TextField
+                  select
+                  fullWidth
+                  label="Year"
+                  value={year}
+                  onChange={(e) => setYear(Number(e.target.value))}
+                >
+                  {[year - 1, year, year + 1].map((y) => (
+                    <MenuItem key={y} value={y}>
+                      {y}
+                    </MenuItem>
+                  ))}
+                </TextField>
 
-            <Grid item xs={12} md={3}>
-              <TextField
-                select
-                fullWidth
-                label="Month"
-                value={month}
-                onChange={(e) => setMonth(e.target.value)}
-              >
-                <MenuItem value="">All</MenuItem>
-                {monthNames.map((m, i) => (
-                  <MenuItem key={m} value={i + 1}>
-                    {m}
-                  </MenuItem>
-                ))}
-              </TextField>
-            </Grid>
-          </Grid>
-        </CardContent>
-      </Card>
+                <TextField
+                  select
+                  fullWidth
+                  label="Month"
+                  value={month}
+                  onChange={(e) => setMonth(e.target.value)}
+                >
+                  <MenuItem value="">All</MenuItem>
+                  {monthNames.map((m, i) => (
+                    <MenuItem key={m} value={i + 1}>
+                      {m}
+                    </MenuItem>
+                  ))}
+                </TextField>
+              </ResponsiveFormGrid>
+            </CardContent>
+          </Card>
+        </ResponsiveSection>
       )}
 
       {/* ================= TOTAL SUMMARY ================= */}
       {properties.length > 0 && propertyId && filteredPayments.length > 0 && (
-      <Card sx={{ mb: 3 }}>
-        <CardContent>
-          <Typography variant="h6">Totals</Typography>
-          <Divider sx={{ my: 1 }} />
-          <Grid container spacing={2}>
-            <Grid item>Rent: ₹{totals.rent}</Grid>
-            <Grid item>Maintenance: ₹{totals.maintenance}</Grid>
-            <Grid item>Light: ₹{totals.light}</Grid>
-            <Grid item>Advance: ₹{totals.advance}</Grid>
-            <Grid item fontWeight="bold">
-              Total: ₹{totals.total}
-            </Grid>
-          </Grid>
-        </CardContent>
-      </Card>
+        <ResponsiveSection>
+          <Card>
+            <CardContent>
+              <Typography variant="h6">Totals</Typography>
+              <Divider sx={{ my: 1 }} />
+              <ResponsiveFormGrid columns={{ xs: 2, sm: 4, md: 5 }}>
+                <Box>
+                  <Typography variant="body2" color="text.secondary">Rent</Typography>
+                  <Typography variant="h6" fontWeight="bold">₹{totals.rent}</Typography>
+                </Box>
+                <Box>
+                  <Typography variant="body2" color="text.secondary">Maintenance</Typography>
+                  <Typography variant="h6" fontWeight="bold">₹{totals.maintenance}</Typography>
+                </Box>
+                <Box>
+                  <Typography variant="body2" color="text.secondary">Light</Typography>
+                  <Typography variant="h6" fontWeight="bold">₹{totals.light}</Typography>
+                </Box>
+                <Box>
+                  <Typography variant="body2" color="text.secondary">Advance</Typography>
+                  <Typography variant="h6" fontWeight="bold">₹{totals.advance}</Typography>
+                </Box>
+                <Box>
+                  <Typography variant="body2" color="text.secondary">Total</Typography>
+                  <Typography variant="h6" fontWeight="bold" color="primary.main">₹{totals.total}</Typography>
+                </Box>
+              </ResponsiveFormGrid>
+            </CardContent>
+          </Card>
+        </ResponsiveSection>
       )}
 
       {/* ================= PAYMENT TABLE ================= */}
       {properties.length > 0 && propertyId && (
-        <Paper>
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableCell>Date</TableCell>
-              <TableCell>Month</TableCell>
-              <TableCell>Type</TableCell>
-              <TableCell align="right">Amount</TableCell>
-            </TableRow>
-          </TableHead>
+        <ResponsiveSection>
+          <Paper>
+            <Table>
+              <TableHead>
+                <TableRow>
+                  <TableCell>Date</TableCell>
+                  <TableCell>Month</TableCell>
+                  <TableCell>Type</TableCell>
+                  <TableCell align="right">Amount</TableCell>
+                </TableRow>
+              </TableHead>
 
-          <TableBody>
-            {filteredPayments.length > 0 ? (
-              filteredPayments.map((p) => {
-                const color = PAYMENT_COLORS[p.type] || PAYMENT_COLORS.advance;
-                return (
-                  <TableRow key={p._id} sx={{ backgroundColor: color.bg }}>
-                    <TableCell>{new Date(p.paidOn).toLocaleDateString()}</TableCell>
-                    <TableCell>{monthNames[p.month - 1] || 'N/A'}</TableCell>
-                    <TableCell sx={{ color: color.text, fontWeight: 600 }}>{p.type}</TableCell>
-                    <TableCell align="right" sx={{ color: color.text, fontWeight: 700 }}>
-                      ₹{p.amount}
+              <TableBody>
+                {filteredPayments.length > 0 ? (
+                  filteredPayments.map((p) => {
+                    const color = PAYMENT_COLORS[p.type] || PAYMENT_COLORS.advance;
+                    return (
+                      <TableRow key={p._id} sx={{ backgroundColor: color.bg }}>
+                        <TableCell>{new Date(p.paidOn).toLocaleDateString()}</TableCell>
+                        <TableCell>{monthNames[p.month - 1] || 'N/A'}</TableCell>
+                        <TableCell sx={{ color: color.text, fontWeight: 600 }}>{p.type}</TableCell>
+                        <TableCell align="right" sx={{ color: color.text, fontWeight: 700 }}>
+                          ₹{p.amount}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={4} align="center" sx={{ py: 4 }}>
+                      <Typography variant="body1" color="text.secondary">
+                        No payment records found for this property
+                      </Typography>
                     </TableCell>
                   </TableRow>
-                );
-              })
-            ) : (
-              <TableRow>
-                <TableCell colSpan={4} align="center" sx={{ py: 4 }}>
-                  <Typography variant="body1" color="text.secondary">
-                    No payment records found for this property
-                  </Typography>
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </Paper>
+                )}
+              </TableBody>
+            </Table>
+          </Paper>
+        </ResponsiveSection>
       )}
 
       {/* Show message when no property is selected */}
       {properties.length > 0 && !propertyId && (
-        <Card sx={{ mt: 3 }}>
-          <CardContent>
-            <Typography variant="body1" align="center" color="text.secondary">
-              Please select a property to view payment history
-            </Typography>
-          </CardContent>
-        </Card>
+        <ResponsiveSection>
+          <Card>
+            <CardContent>
+              <Typography variant="body1" align="center" color="text.secondary">
+                Please select a property to view payment history
+              </Typography>
+            </CardContent>
+          </Card>
+        </ResponsiveSection>
       )}
-    </Box>
+    </ResponsivePageLayout>
   );
 }
 

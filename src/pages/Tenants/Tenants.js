@@ -1,9 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import {
   Box,
   Typography,
-  Grid,
   Card,
   CardContent,
   Avatar,
@@ -31,6 +30,12 @@ import {
   deleteTenant,
   updateTenant
 } from '../../store/slices/tenantSlice';
+import ResponsivePageLayout, { 
+  ResponsiveHeader, 
+  ResponsiveCardGrid,
+  ResponsiveFormGrid,
+  ResponsiveSection
+} from '../../components/Layout/ResponsivePageLayout';
 
 function Tenants() {
   const dispatch = useDispatch();
@@ -97,96 +102,118 @@ function Tenants() {
   }
 
   return (
-    <Box p={2}>
-      <Typography variant="h4" fontWeight={600} gutterBottom>
-        Tenants
-      </Typography>
+    <ResponsivePageLayout>
+      <ResponsiveHeader>
+        <Box>
+          <Typography variant="h4" fontWeight={600}>
+            Tenants
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            Manage tenant information and details
+          </Typography>
+        </Box>
+      </ResponsiveHeader>
 
-      <Grid container spacing={3}>
-        {tenants.map((tenant) => (
-          <Grid item xs={12} sm={6} md={4} key={tenant._id}>
-            <Card
-              sx={{
-                height: '100%',
-                transition: '0.3s',
-                '&:hover': { boxShadow: 6 }
-              }}
-            >
-              <CardContent>
-                <Box display="flex" alignItems="center" gap={2} mb={1}>
-                  <Avatar
-                    src={tenant.photo || ''}
-                    alt={tenant.name}
-                    sx={{ width: 56, height: 56 }}
-                  />
-                  <Box>
-                    <Typography variant="h6">{tenant.name}</Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      {tenant.propertyId
-                        ? `${tenant.propertyId.propertyType} - ${tenant.propertyId.location}`
-                        : '-'}
+      <ResponsiveSection>
+        {loading ? (
+          <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
+            <CircularProgress />
+          </Box>
+        ) : (
+          <ResponsiveCardGrid cardSize="medium">
+            {tenants.length === 0 ? (
+              <Box sx={{ gridColumn: '1 / -1', textAlign: 'center', py: 4 }}>
+                <Typography>No tenants found.</Typography>
+              </Box>
+            ) : (
+              tenants.map((tenant) => (
+                <Card
+                  key={tenant._id}
+                  sx={{
+                    height: '100%',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    transition: '0.3s',
+                    '&:hover': { boxShadow: 6 }
+                  }}
+                >
+                  <CardContent sx={{ flex: 1 }}>
+                    <Box display="flex" alignItems="center" gap={2} mb={1}>
+                      <Avatar
+                        src={tenant.photo || ''}
+                        alt={tenant.name}
+                        sx={{ width: 56, height: 56 }}
+                      />
+                      <Box flex={1}>
+                        <Typography variant="h6">{tenant.name}</Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          {tenant.propertyId
+                            ? `${tenant.propertyId.propertyType} - ${tenant.propertyId.location}`
+                            : '-'}
+                        </Typography>
+                      </Box>
+                    </Box>
+
+                    <Divider sx={{ my: 1 }} />
+
+                    <Typography variant="body2">
+                      <strong>Phone:</strong> {tenant.phone || '-'}
                     </Typography>
-                  </Box>
-                </Box>
+                    <Typography variant="body2">
+                      <strong>Email:</strong> {tenant.email || '-'}
+                    </Typography>
 
-                <Divider sx={{ my: 1 }} />
+                    <Stack direction="row" spacing={1} mt={2} flexWrap="wrap">
+                      <Chip
+                        label={tenant.propertyId ? 'Active' : 'Inactive'}
+                        color={tenant.propertyId ? 'success' : 'default'}
+                        size="small"
+                      />
+                      <Chip
+                        label={tenant.isVerified ? 'Verified' : 'Unverified'}
+                        color={tenant.isVerified ? 'primary' : 'default'}
+                        size="small"
+                      />
+                      <Chip
+                        label={`${tenant.documents?.length || 0} Documents`}
+                        color="info"
+                        size="small"
+                      />
+                    </Stack>
 
-                <Typography variant="body2">
-                  <strong>Phone:</strong> {tenant.phone || '-'}
-                </Typography>
-                <Typography variant="body2">
-                  <strong>Email:</strong> {tenant.email || '-'}
-                </Typography>
+                    <Box display="flex" justifyContent="flex-end" mt={2}>
+                      <Tooltip title="Edit tenant">
+                        <IconButton
+                          color="primary"
+                          onClick={() => handleEditOpen(tenant)}
+                        >
+                          <EditIcon />
+                        </IconButton>
+                      </Tooltip>
 
-                <Stack direction="row" spacing={1} mt={2} flexWrap="wrap">
-                  <Chip
-                    label={tenant.propertyId ? 'Active' : 'Inactive'}
-                    color={tenant.propertyId ? 'success' : 'default'}
-                    size="small"
-                  />
-                  <Chip
-                    label={tenant.isVerified ? 'Verified' : 'Unverified'}
-                    color={tenant.isVerified ? 'primary' : 'default'}
-                    size="small"
-                  />
-                  <Chip
-                    label={`${tenant.documents?.length || 0} Documents`}
-                    color="info"
-                    size="small"
-                  />
-                </Stack>
-
-                <Box display="flex" justifyContent="flex-end" mt={2}>
-                  <Tooltip title="Edit tenant">
-                    <IconButton
-                      color="primary"
-                      onClick={() => handleEditOpen(tenant)}
-                    >
-                      <EditIcon />
-                    </IconButton>
-                  </Tooltip>
-
-                  <Tooltip title="Delete tenant">
-                    <IconButton
-                      color="error"
-                      onClick={() => handleDelete(tenant._id)}
-                    >
-                      <DeleteIcon />
-                    </IconButton>
-                  </Tooltip>
-                </Box>
-              </CardContent>
-            </Card>
-          </Grid>
-        ))}
-      </Grid>
+                      <Tooltip title="Delete tenant">
+                        <IconButton
+                          color="error"
+                          onClick={() => handleDelete(tenant._id)}
+                        >
+                          <DeleteIcon />
+                        </IconButton>
+                      </Tooltip>
+                    </Box>
+                  </CardContent>
+                </Card>
+              ))
+            )}
+          </ResponsiveCardGrid>
+        )}
+      </ResponsiveSection>
 
       {pagination.totalPages > 1 && (
         <Box display="flex" justifyContent="center" mt={3}>
           <Pagination
             count={pagination.totalPages}
             page={page}
-            onChange={(e, value) => setPage(value)}
+            onChange={(_, value) => setPage(value)}
           />
         </Box>
       )}
@@ -196,59 +223,51 @@ function Tenants() {
         <DialogTitle>Edit Tenant</DialogTitle>
 
         <DialogContent>
-          <Grid container spacing={2} mt={1}>
-            <Grid item xs={12}>
-              <TextField
-                label="Name"
-                fullWidth
-                value={selectedTenant?.name || ''}
-                onChange={(e) =>
-                  setSelectedTenant({ ...selectedTenant, name: e.target.value })
-                }
-              />
-            </Grid>
+          <ResponsiveFormGrid columns={{ xs: 1, sm: 1 }} sx={{ mt: 1 }}>
+            <TextField
+              label="Name"
+              fullWidth
+              value={selectedTenant?.name || ''}
+              onChange={(e) =>
+                setSelectedTenant({ ...selectedTenant, name: e.target.value })
+              }
+            />
 
-            <Grid item xs={12}>
-              <TextField
-                label="Email"
-                fullWidth
-                value={selectedTenant?.email || ''}
-                onChange={(e) =>
-                  setSelectedTenant({ ...selectedTenant, email: e.target.value })
-                }
-              />
-            </Grid>
+            <TextField
+              label="Email"
+              fullWidth
+              value={selectedTenant?.email || ''}
+              onChange={(e) =>
+                setSelectedTenant({ ...selectedTenant, email: e.target.value })
+              }
+            />
 
-            <Grid item xs={12}>
-              <TextField
-                label="Phone"
-                fullWidth
-                value={selectedTenant?.phone || ''}
-                onChange={(e) =>
-                  setSelectedTenant({ ...selectedTenant, phone: e.target.value })
-                }
-              />
-            </Grid>
+            <TextField
+              label="Phone"
+              fullWidth
+              value={selectedTenant?.phone || ''}
+              onChange={(e) =>
+                setSelectedTenant({ ...selectedTenant, phone: e.target.value })
+              }
+            />
 
-            <Grid item xs={12}>
-              <TextField
-                label="Verification Status"
-                select
-                fullWidth
-                SelectProps={{ native: true }}
-                value={selectedTenant?.isVerified ? 'true' : 'false'}
-                onChange={(e) =>
-                  setSelectedTenant({
-                    ...selectedTenant,
-                    isVerified: e.target.value === 'true'
-                  })
-                }
-              >
-                <option value="true">Verified</option>
-                <option value="false">Unverified</option>
-              </TextField>
-            </Grid>
-          </Grid>
+            <TextField
+              label="Verification Status"
+              select
+              fullWidth
+              SelectProps={{ native: true }}
+              value={selectedTenant?.isVerified ? 'true' : 'false'}
+              onChange={(e) =>
+                setSelectedTenant({
+                  ...selectedTenant,
+                  isVerified: e.target.value === 'true'
+                })
+              }
+            >
+              <option value="true">Verified</option>
+              <option value="false">Unverified</option>
+            </TextField>
+          </ResponsiveFormGrid>
         </DialogContent>
 
         <DialogActions>
@@ -265,7 +284,7 @@ function Tenants() {
           </Button>
         </DialogActions>
       </Dialog>
-    </Box>
+    </ResponsivePageLayout>
   );
 }
 

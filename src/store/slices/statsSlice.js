@@ -45,9 +45,13 @@ export const fetchAnalytics = createAsyncThunk(
       if (year) params.year = year;
       if (month) params.month = month;
       if (propertyId) params.propertyId = propertyId;
+      
+      console.log('API Call: /stats/analytics with params:', params);
       const response = await api.get('/stats/analytics', { params });
+      console.log('API Response:', response.data);
       return response.data.data;
     } catch (error) {
+      console.error('API Error:', error.response?.data || error.message);
       return rejectWithValue(error.response?.data?.message || 'Failed to fetch analytics');
     }
   }
