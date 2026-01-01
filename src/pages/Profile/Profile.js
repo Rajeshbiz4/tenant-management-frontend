@@ -4,8 +4,6 @@ import {
   Box,
   Card,
   CardContent,
-  Container,
-  Grid,
   Typography,
   Button,
   TextField,
@@ -16,6 +14,7 @@ import {
   IconButton,
   Chip,
   Paper,
+  Container
 } from '@mui/material';
 import {
   Edit as EditIcon,
@@ -32,6 +31,12 @@ import GradientBackground from '../../components/UI/GradientBackground';
 import ModernLoader from '../../components/UI/ModernLoader';
 import ChangePassword from './ChangePassword';
 import { updateProfile } from '../../store/slices/authSlice';
+import ResponsivePageLayout, { 
+  ResponsiveHeader, 
+  ResponsiveSection,
+  ResponsiveGrid,
+  ResponsiveGridItem
+} from '../../components/Layout/ResponsivePageLayout';
 
 function Profile() {
   const dispatch = useDispatch();
@@ -146,12 +151,13 @@ function Profile() {
   };
 
   const getInitials = (name) => {
+    if (!name || typeof name !== 'string') return 'U';
     return name
       .split(' ')
-      .map(word => word.charAt(0))
+      .map(word => word && typeof word === 'string' ? word.charAt(0) : '')
       .join('')
       .toUpperCase()
-      .slice(0, 2);
+      .slice(0, 2) || 'U';
   };
 
   const formatDate = (dateString) => {
@@ -178,112 +184,131 @@ function Profile() {
   }
 
   return (
-    <Container maxWidth="md" sx={{ py: 4 }}>
+    <ResponsivePageLayout maxWidth="md">
       {/* Header */}
-      <GradientBackground variant="primary" opacity={0.03} sx={{ borderRadius: 4, p: 4, mb: 4 }}>
-        <Stack direction="row" alignItems="center" spacing={3}>
-          <Box sx={{ position: 'relative' }}>
-            <Avatar
-              sx={{
-                width: 80,
-                height: 80,
-                bgcolor: 'primary.main',
-                fontSize: '2rem',
-                fontWeight: 'bold',
-              }}
-            >
-              {getInitials(user.name || 'User')}
-            </Avatar>
-            <IconButton
-              sx={{
-                position: 'absolute',
-                bottom: -5,
-                right: -5,
-                bgcolor: 'background.paper',
-                boxShadow: 2,
-                '&:hover': { bgcolor: 'grey.100' },
-              }}
-              size="small"
-            >
-              <PhotoCameraIcon fontSize="small" />
-            </IconButton>
-          </Box>
-          <Box flex={1}>
-            <Typography variant="h4" fontWeight="bold" gutterBottom>
-              {user.name || 'User Profile'}
-            </Typography>
-            <Typography variant="body1" color="text.secondary">
-              Manage your account settings and preferences
-            </Typography>
-            <Stack direction="row" spacing={1} sx={{ mt: 1 }}>
-              <Chip
-                icon={<BusinessIcon />}
-                label={user.propertyName || 'Property Owner'}
-                color="primary"
-                variant="outlined"
-                size="small"
-              />
-              <Chip
-                icon={<CalendarIcon />}
-                label={`Member since ${formatDate(user.createdAt)}`}
-                color="secondary"
-                variant="outlined"
-                size="small"
-              />
-            </Stack>
-          </Box>
-          <Box>
-            {!isEditing ? (
-              <Button
-                variant="contained"
-                startIcon={<EditIcon />}
-                onClick={() => setIsEditing(true)}
-                sx={{ minWidth: 120 }}
+      <ResponsiveSection>
+        <GradientBackground variant="primary" opacity={0.03} sx={{ borderRadius: 4, p: { xs: 3, sm: 4 } }}>
+          <Stack 
+            direction={{ xs: 'column', sm: 'row' }} 
+            alignItems={{ xs: 'center', sm: 'flex-start' }} 
+            spacing={3}
+            textAlign={{ xs: 'center', sm: 'left' }}
+          >
+            <Box sx={{ position: 'relative' }}>
+              <Avatar
+                sx={{
+                  width: { xs: 64, sm: 80 },
+                  height: { xs: 64, sm: 80 },
+                  bgcolor: 'primary.main',
+                  fontSize: { xs: '1.5rem', sm: '2rem' },
+                  fontWeight: 'bold',
+                }}
               >
-                Edit Profile
-              </Button>
-            ) : (
-              <Stack direction="row" spacing={1}>
+                {getInitials(user.name || 'User')}
+              </Avatar>
+              <IconButton
+                sx={{
+                  position: 'absolute',
+                  bottom: -5,
+                  right: -5,
+                  bgcolor: 'background.paper',
+                  boxShadow: 2,
+                  '&:hover': { bgcolor: 'grey.100' },
+                }}
+                size="small"
+              >
+                <PhotoCameraIcon fontSize="small" />
+              </IconButton>
+            </Box>
+            <Box flex={1}>
+              <Typography variant={{ xs: 'h5', sm: 'h4' }} fontWeight="bold" gutterBottom>
+                {user.name || 'User Profile'}
+              </Typography>
+              <Typography variant="body1" color="text.secondary">
+                Manage your account settings and preferences
+              </Typography>
+              <Stack 
+                direction={{ xs: 'column', sm: 'row' }} 
+                spacing={1} 
+                sx={{ mt: 1 }}
+                alignItems={{ xs: 'center', sm: 'flex-start' }}
+              >
+                <Chip
+                  icon={<BusinessIcon />}
+                  label={user.propertyName || 'Property Owner'}
+                  color="primary"
+                  variant="outlined"
+                  size="small"
+                />
+                <Chip
+                  icon={<CalendarIcon />}
+                  label={`Member since ${formatDate(user.createdAt)}`}
+                  color="secondary"
+                  variant="outlined"
+                  size="small"
+                />
+              </Stack>
+            </Box>
+            <Box>
+              {!isEditing ? (
                 <Button
                   variant="contained"
-                  startIcon={<SaveIcon />}
-                  onClick={handleSave}
-                  disabled={saveLoading}
-                  sx={{ minWidth: 100 }}
+                  startIcon={<EditIcon />}
+                  onClick={() => setIsEditing(true)}
+                  sx={{ minWidth: 120 }}
+                  size="small"
                 >
-                  {saveLoading ? 'Saving...' : 'Save'}
+                  Edit Profile
                 </Button>
-                <Button
-                  variant="outlined"
-                  startIcon={<CancelIcon />}
-                  onClick={handleCancel}
-                  disabled={saveLoading}
-                >
-                  Cancel
-                </Button>
-              </Stack>
-            )}
-          </Box>
-        </Stack>
-      </GradientBackground>
+              ) : (
+                <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
+                  <Button
+                    variant="contained"
+                    startIcon={<SaveIcon />}
+                    onClick={handleSave}
+                    disabled={saveLoading}
+                    sx={{ minWidth: 100 }}
+                    size="small"
+                  >
+                    {saveLoading ? 'Saving...' : 'Save'}
+                  </Button>
+                  <Button
+                    variant="outlined"
+                    startIcon={<CancelIcon />}
+                    onClick={handleCancel}
+                    disabled={saveLoading}
+                    size="small"
+                  >
+                    Cancel
+                  </Button>
+                </Stack>
+              )}
+            </Box>
+          </Stack>
+        </GradientBackground>
+      </ResponsiveSection>
 
       {/* Success Message */}
       {successMessage && (
-        <Alert severity="success" sx={{ mb: 3 }}>
-          {successMessage}
-        </Alert>
+        <ResponsiveSection>
+          <Alert severity="success">
+            {successMessage}
+          </Alert>
+        </ResponsiveSection>
       )}
 
       {/* Error Message */}
       {formErrors.general && (
-        <Alert severity="error" sx={{ mb: 3 }}>
-          {formErrors.general}
-        </Alert>
+        <ResponsiveSection>
+          <Alert severity="error">
+            {formErrors.general}
+          </Alert>
+        </ResponsiveSection>
       )}
 
-      <Grid container spacing={3}>
+      <ResponsiveGrid spacing={3}>
         {/* Personal Information */}
-        <Grid item xs={12} md={8}>
+        <ResponsiveGridItem xs={12} md={8}>
           <Card>
             <CardContent>
               <Stack direction="row" alignItems="center" spacing={2} mb={3}>
@@ -293,8 +318,8 @@ function Profile() {
                 </Typography>
               </Stack>
               
-              <Grid container spacing={3}>
-                <Grid item xs={12} sm={6}>
+              <ResponsiveGrid spacing={3}>
+                <ResponsiveGridItem xs={12} sm={6}>
                   <TextField
                     fullWidth
                     label="Full Name"
@@ -305,9 +330,9 @@ function Profile() {
                     helperText={formErrors.name}
                     variant="outlined"
                   />
-                </Grid>
+                </ResponsiveGridItem>
                 
-                <Grid item xs={12} sm={6}>
+                <ResponsiveGridItem xs={12} sm={6}>
                   <TextField
                     fullWidth
                     label="Email Address"
@@ -319,9 +344,9 @@ function Profile() {
                     helperText={formErrors.email}
                     variant="outlined"
                   />
-                </Grid>
+                </ResponsiveGridItem>
                 
-                <Grid item xs={12}>
+                <ResponsiveGridItem xs={12}>
                   <TextField
                     fullWidth
                     label="Property/Business Name"
@@ -332,14 +357,14 @@ function Profile() {
                     helperText={formErrors.propertyName || 'This name appears in your dashboard and reports'}
                     variant="outlined"
                   />
-                </Grid>
-              </Grid>
+                </ResponsiveGridItem>
+              </ResponsiveGrid>
             </CardContent>
           </Card>
-        </Grid>
+        </ResponsiveGridItem>
 
         {/* Account Information */}
-        <Grid item xs={12} md={4}>
+        <ResponsiveGridItem xs={12} md={4}>
           <Stack spacing={3}>
             {/* Account Details */}
             <Card>
@@ -356,7 +381,7 @@ function Profile() {
                     <Typography variant="body2" color="text.secondary" gutterBottom>
                       User ID
                     </Typography>
-                    <Typography variant="body1" fontFamily="monospace">
+                    <Typography variant="body1" fontFamily="monospace" sx={{ wordBreak: 'break-all' }}>
                       {user.id || 'N/A'}
                     </Typography>
                   </Box>
@@ -447,15 +472,15 @@ function Profile() {
               </Stack>
             </Paper>
           </Stack>
-        </Grid>
-      </Grid>
+        </ResponsiveGridItem>
+      </ResponsiveGrid>
 
       {/* Change Password Dialog */}
       <ChangePassword
         open={showChangePassword}
         onClose={() => setShowChangePassword(false)}
       />
-    </Container>
+    </ResponsivePageLayout>
   );
 }
 

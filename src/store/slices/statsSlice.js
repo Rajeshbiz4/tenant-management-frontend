@@ -46,12 +46,12 @@ export const fetchAnalytics = createAsyncThunk(
       if (month) params.month = month;
       if (propertyId) params.propertyId = propertyId;
       
-      console.log('API Call: /stats/analytics with params:', params);
+      console.log('Fetching analytics with params:', params);
       const response = await api.get('/stats/analytics', { params });
-      console.log('API Response:', response.data);
+      console.log('Analytics API response:', response.data);
       return response.data.data;
     } catch (error) {
-      console.error('API Error:', error.response?.data || error.message);
+      console.error('Analytics API error:', error.response?.data || error.message);
       return rejectWithValue(error.response?.data?.message || 'Failed to fetch analytics');
     }
   }
