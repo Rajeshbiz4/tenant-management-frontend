@@ -145,7 +145,7 @@ function Layout({ children }) {
           </IconButton>
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
             <Typography variant="h6" color="text.primary" fontWeight="bold">
-              {user?.propertyName 
+              {user?.propertyName && typeof user.propertyName === 'string'
                 ? user.propertyName.charAt(0).toUpperCase() + user.propertyName.slice(1)
                 : 'Property'}
             </Typography>
@@ -166,7 +166,7 @@ function Layout({ children }) {
           </Tooltip>
           <IconButton onClick={handleMenuOpen} size="small">
             <Avatar sx={{ width: 38, height: 38, bgcolor: 'secondary.main', color: '#fff' }}>
-              {user?.name?.charAt(0).toUpperCase() || 'U'}
+              {(user?.name && typeof user.name === 'string') ? user.name.charAt(0).toUpperCase() : 'U'}
             </Avatar>
           </IconButton>
           <Menu anchorEl={anchorEl} open={Boolean(anchorEl)} onClose={handleMenuClose}>

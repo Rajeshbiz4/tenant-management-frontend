@@ -24,6 +24,13 @@ import {
   ListItem,
   ListItemText,
   Divider,
+  TableContainer,
+  Table,
+  TableHead,
+  TableBody,
+  TableRow,
+  TableCell,
+  Paper,
 } from '@mui/material';
 import {
   ArrowBack as ArrowBackIcon,
@@ -34,6 +41,8 @@ import {
   FlashOn as FlashIcon,
   Build as BuildIcon,
   Payments as PaymentsIcon,
+  CalendarToday as CalendarIcon,
+  Receipt as ReceiptIcon,
 } from '@mui/icons-material';
 import { useFormik } from 'formik';
 import * as Yup from 'yup';
@@ -46,6 +55,8 @@ import {
   updateMaintenanceStatus,
   updateLightBillStatus,
 } from '../../store/slices/tenantSlice';
+import { getPayments, makePayment } from '../../store/slices/paymentSlice';
+import { fetchMaintenance, createMaintenance } from '../../store/slices/maintenanceSlice';
 
 const tenantValidationSchema = Yup.object({
   name: Yup.string().required('Name is required'),
@@ -78,6 +89,8 @@ function PropertyDetails() {
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const { currentProperty } = useSelector((state) => state.property);
+  const { payments } = useSelector((state) => state.payment);
+  const { maintenanceRecords } = useSelector((state) => state.maintenance);
   const [loading, setLoading] = useState(true);
   const [tenantDialogOpen, setTenantDialogOpen] = useState(false);
   const [tab, setTab] = useState('rent');
@@ -86,6 +99,10 @@ function PropertyDetails() {
     const load = async () => {
       setLoading(true);
       await dispatch(getProperty(id));
+      // Fetch payments for this property
+      await dispatch(getPayments({ propertyId: id }));
+      // Fetch maintenance records for this property
+      await dispatch(fetchMaintenance({ property: id, limit: 50 }));
       setLoading(false);
     };
     if (id) {
@@ -93,9 +110,11 @@ function PropertyDetails() {
     }
   }, [dispatch, id]);
 
-  const refreshProperty = () => {
+  const refreshProperty = async () => {
     if (id) {
-      dispatch(getProperty(id));
+      await dispatch(getProperty(id));
+      await dispatch(getPayments({ propertyId: id }));
+      await dispatch(fetchMaintenance({ property: id, limit: 50 }));
     }
   };
 
@@ -181,22 +200,270 @@ function PropertyDetails() {
     { id: 'maintenance', label: 'Maintenance', icon: <BuildIcon /> },
   ];
 
-  const historyItems = Array.from({ length: tenant ? 3 : 0 }).map((_, idx) => ({
-    label: `${tabConfig.find((t) => t.id === tab)?.label || 'Payment'} #${idx + 1}`,
-    amount:
-      tab === 'electric'
-        ? currentProperty.electricity?.lastUnit * currentProperty.electricity?.unitRate || 0
-        : tab === 'maintenance'
-        ? currentProperty.rent?.maintenance || 0
-        : currentProperty.rent?.amount || 0,
-    date: format(new Date(Date.now() - idx * 30 * 24 * 60 * 60 * 1000), 'dd MMMM yyyy'),
-    status:
-      tab === 'electric'
-        ? tenant?.lightBillStatus
-        : tab === 'maintenance'
-        ? tenant?.maintenanceStatus
-        : tenant?.rentStatus,
-  }));
+  // Get real data based on current tab
+  const getRealHistoryData = () => {
+    if (!currentProperty || !id) return [];
+
+    switch (tab) {
+      case 'rent':
+        return payments
+          .filter(payment => {
+            // Handle both string and ObjectId comparisons
+            const paymentPropertyId = payment.property?._id || payment.property;
+            return (paymentPropertyId === id || paymentPropertyId?.toString() === id) && payment.type === 'rent';
+          })
+          .sort((a, b) => new Date(b.paidOn) - new Date(a.paidOn))
+          .map(payment => ({
+            id: payment._id,
+            label: `Rent Payment`,
+            amount: payment.amount,
+            date: format(new Date(payment.paidOn), 'dd MMMM yyyy'),
+            status: 'paid',
+            type: 'rent',
+            month: payment.month,
+            year: payment.year,
+            paidOn: payment.paidOn,
+          }));
+
+      case 'electric':
+        return payments
+          .filter(payment => {
+            // Handle both string and ObjectId comparisons
+            const paymentPropertyId = payment.property?._id || payment.property;
+            return (paymentPropertyId === id || paymentPropertyId?.toString() === id) && payment.type === 'light';
+          })
+          .sort((a, b) => new Date(b.paidOn) - new Date(a.paidOn))
+          .map(payment => ({
+            id: payment._id,
+            label: `Electric Bill Payment`,
+            amount: payment.amount,
+            date: format(new Date(payment.paidOn), 'dd MMMM yyyy'),
+            status: 'paid',
+            type: 'light',
+            month: payment.month,
+            year: payment.year,
+            paidOn: payment.paidOn,
+          }));
+
+      case 'maintenance':
+        return maintenanceRecords
+          .filter(record => {
+            // Handle both string and ObjectId comparisons
+            const recordPropertyId = record.property?._id || record.property;
+            return recordPropertyId === id || recordPropertyId?.toString() === id;
+          })
+          .sort((a, b) => new Date(b.activityDate) - new Date(a.activityDate))
+          .map(record => ({
+            id: record._id,
+            label: record.description || 'Maintenance Work',
+            amount: record.amount,
+            date: format(new Date(record.activityDate), 'dd MMMM yyyy'),
+            status: record.status,
+            type: 'maintenance',
+            maintainer: record.maintainer,
+            activityDate: record.activityDate,
+            paidDate: record.paidDate,
+          }));
+
+      default:
+        return [];
+    }
+  };
+
+  const historyData = getRealHistoryData();
+
+  // Debug logging
+  console.log('PropertyDetails Debug:', {
+    propertyId: id,
+    paymentsCount: payments.length,
+    maintenanceCount: maintenanceRecords.length,
+    currentTab: tab,
+    historyDataCount: historyData.length,
+    samplePayment: payments[0], // Full first payment for debugging
+    sampleMaintenance: maintenanceRecords[0], // Full first maintenance record for debugging
+    allPaymentPropertyIds: payments.map(p => ({
+      id: p._id,
+      property: p.property,
+      propertyId: p.property?._id || p.property,
+      type: p.type
+    })),
+    allMaintenancePropertyIds: maintenanceRecords.map(m => ({
+      id: m._id,
+      property: m.property,
+      propertyId: m.property?._id || m.property
+    }))
+  });
+
+  const createTestData = async (type) => {
+    if (!tenant || !id) {
+      alert('Need a tenant assigned to create test data');
+      return;
+    }
+
+    try {
+      if (type === 'rent' || type === 'electric') {
+        // Create a test payment
+        const paymentData = {
+          propertyId: id,
+          tenantId: tenant._id,
+          type: type === 'rent' ? 'rent' : 'light',
+          amount: type === 'rent' 
+            ? (currentProperty.rent?.monthlyRent || currentProperty.monthlyRent || 5000)
+            : (currentProperty.electricity?.lastUnit && currentProperty.electricity?.unitRate
+                ? currentProperty.electricity.lastUnit * currentProperty.electricity.unitRate
+                : 1000),
+          paidOn: new Date().toISOString(),
+          month: new Date().getMonth() + 1,
+          year: new Date().getFullYear()
+        };
+
+        await dispatch(makePayment(paymentData));
+        alert(`Test ${type} payment created successfully!`);
+      } else if (type === 'maintenance') {
+        // Create a test maintenance record
+        const maintenanceData = {
+          property: id,
+          maintainer: 'Test Maintainer',
+          activityDate: new Date().toISOString(),
+          amount: 2000,
+          description: 'Test maintenance work - plumbing repair',
+          status: 'paid',
+          paidDate: new Date().toISOString()
+        };
+
+        await dispatch(createMaintenance(maintenanceData));
+        alert('Test maintenance record created successfully!');
+      }
+
+      // Refresh the data
+      await refreshProperty();
+    } catch (error) {
+      console.error('Error creating test data:', error);
+      alert('Error creating test data. Check console for details.');
+    }
+  };
+
+  const currency = (amount) => `₹${amount?.toLocaleString('en-IN') || 0}`;
+
+  const renderHistoryContent = () => {
+    if (!tenant && tab !== 'maintenance') {
+      return (
+        <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', py: 4 }}>
+          Assign a tenant to begin tracking {tab === 'rent' ? 'rent payments' : 'electric bill payments'} for this property.
+        </Typography>
+      );
+    }
+
+    if (historyData.length === 0) {
+      return (
+        <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', py: 4 }}>
+          No {tab === 'rent' ? 'rent payments' : tab === 'electric' ? 'electric bill payments' : 'maintenance records'} found for this property.
+        </Typography>
+      );
+    }
+
+    if (tab === 'maintenance') {
+      return (
+        <TableContainer component={Paper} elevation={0}>
+          <Table size="small">
+            <TableHead>
+              <TableRow>
+                <TableCell>Description</TableCell>
+                <TableCell>Maintainer</TableCell>
+                <TableCell>Activity Date</TableCell>
+                <TableCell>Amount</TableCell>
+                <TableCell>Status</TableCell>
+                <TableCell>Paid Date</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {historyData.map((record) => (
+                <TableRow key={record.id}>
+                  <TableCell>
+                    <Typography variant="body2" fontWeight={500}>
+                      {record.label}
+                    </Typography>
+                  </TableCell>
+                  <TableCell>
+                    <Typography variant="body2">
+                      {record.maintainer}
+                    </Typography>
+                  </TableCell>
+                  <TableCell>
+                    <Stack direction="row" spacing={1} alignItems="center">
+                      <CalendarIcon fontSize="small" color="action" />
+                      <Typography variant="body2">
+                        {record.date}
+                      </Typography>
+                    </Stack>
+                  </TableCell>
+                  <TableCell>
+                    <Typography variant="body2" fontWeight={600} color="primary.main">
+                      {currency(record.amount)}
+                    </Typography>
+                  </TableCell>
+                  <TableCell>
+                    <Chip
+                      label={record.status}
+                      color={record.status === 'paid' ? 'success' : 'warning'}
+                      size="small"
+                    />
+                  </TableCell>
+                  <TableCell>
+                    <Typography variant="body2" color="text.secondary">
+                      {record.paidDate ? format(new Date(record.paidDate), 'dd MMM yyyy') : '-'}
+                    </Typography>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
+      );
+    }
+
+    // For rent and electric bills
+    return (
+      <List>
+        {historyData.map((entry) => (
+          <ListItem key={entry.id} disableGutters divider>
+            <Stack direction="row" spacing={1} alignItems="center" sx={{ minWidth: 0 }}>
+              <ReceiptIcon fontSize="small" color="action" />
+              <ListItemText 
+                primary={
+                  <Typography variant="body1" fontWeight={500}>
+                    {entry.label}
+                  </Typography>
+                }
+                secondary={
+                  <Stack direction="row" spacing={2} alignItems="center">
+                    <Typography variant="body2" color="text.secondary">
+                      Paid on: {entry.date}
+                    </Typography>
+                    {entry.month && entry.year && (
+                      <Typography variant="body2" color="text.secondary">
+                        For: {new Date(entry.year, entry.month - 1).toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })}
+                      </Typography>
+                    )}
+                  </Stack>
+                }
+              />
+            </Stack>
+            <Stack direction="row" spacing={2} alignItems="center">
+              <Typography variant="h6" fontWeight={600} color="success.main">
+                {currency(entry.amount)}
+              </Typography>
+              <Chip
+                label={entry.status}
+                color={entry.status === 'paid' ? 'success' : 'warning'}
+                size="small"
+              />
+            </Stack>
+          </ListItem>
+        ))}
+      </List>
+    );
+  };
 
   return (
     <Box>
@@ -215,28 +482,30 @@ function PropertyDetails() {
           <Card>
             <CardContent>
               <Stack direction="row" spacing={1} mb={2}>
-                <Chip label={currentProperty.propertyType} color="primary" />
-                <Chip label={`${currentProperty.area} sq.ft`} />
+                <Chip label={currentProperty.propertyType || 'Unknown'} color="primary" />
+                <Chip label={`${currentProperty.area || 0} sq.ft`} />
               </Stack>
               <Grid container spacing={3}>
                 <Grid item xs={6}>
                   <Typography variant="caption" color="text.secondary">
                     Monthly Rent
                   </Typography>
-                  <Typography variant="h5">₹{currentProperty.rent?.amount || 0}</Typography>
+                  <Typography variant="h5">₹{currentProperty.rent?.monthlyRent || currentProperty.monthlyRent || 0}</Typography>
                 </Grid>
                 <Grid item xs={6}>
                   <Typography variant="caption" color="text.secondary">
                     Maintenance
                   </Typography>
-                  <Typography variant="h5">₹{currentProperty.rent?.maintenance || 0}</Typography>
+                  <Typography variant="h5">₹{currentProperty.rent?.maintenance || currentProperty.maintenance || 0}</Typography>
                 </Grid>
                 <Grid item xs={6}>
                   <Typography variant="caption" color="text.secondary">
-                    Light Bill
+                    Light Bill (Last)
                   </Typography>
                   <Typography variant="h5">
-                    ₹{currentProperty.electricity?.lastUnit * currentProperty.electricity?.unitRate || 0}
+                    ₹{currentProperty.electricity?.lastUnit && currentProperty.electricity?.unitRate
+                      ? (currentProperty.electricity.lastUnit * currentProperty.electricity.unitRate)
+                      : currentProperty.lightBill || 0}
                   </Typography>
                 </Grid>
                 <Grid item xs={6}>
@@ -346,28 +615,100 @@ function PropertyDetails() {
             ))}
           </Tabs>
           <Divider sx={{ mb: 2 }} />
-          {tenant ? (
-            <List>
-              {historyItems.map((entry, idx) => (
-                <ListItem key={idx} disableGutters divider={idx < historyItems.length - 1}>
-                  <ListItemText primary={entry.label} secondary={`Due: ${entry.date}`} />
-                  <Stack direction="row" spacing={2} alignItems="center">
-                    <Typography variant="body1" fontWeight={600}>
-                      ₹{entry.amount}
+          
+          {/* Debug Information - Remove this after fixing */}
+          {process.env.NODE_ENV === 'development' && (
+            <Card sx={{ mb: 3, bgcolor: 'info.light' }}>
+              <CardContent>
+                <Typography variant="h6" gutterBottom>Debug Information</Typography>
+                <Typography variant="body2">Property ID: {id}</Typography>
+                <Typography variant="body2">Total Payments: {payments.length}</Typography>
+                <Typography variant="body2">Total Maintenance: {maintenanceRecords.length}</Typography>
+                <Typography variant="body2">Current Tab: {tab}</Typography>
+                <Typography variant="body2">History Data Count: {historyData.length}</Typography>
+                {payments.length > 0 && (
+                  <Typography variant="body2">
+                    Sample Payment Property ID: {payments[0]?.property?._id || payments[0]?.property}
+                  </Typography>
+                )}
+                {maintenanceRecords.length > 0 && (
+                  <Typography variant="body2">
+                    Sample Maintenance Property ID: {maintenanceRecords[0]?.property?._id || maintenanceRecords[0]?.property}
+                  </Typography>
+                )}
+                <Box sx={{ mt: 2 }}>
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    onClick={() => {
+                      console.log('All Payments:', payments);
+                      console.log('All Maintenance:', maintenanceRecords);
+                      console.log('Current Property:', currentProperty);
+                    }}
+                  >
+                    Log All Data to Console
+                  </Button>
+                </Box>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Summary Stats for Current Tab */}
+          {historyData.length > 0 && (
+            <Grid container spacing={2} sx={{ mb: 3 }}>
+              <Grid item xs={12} sm={4}>
+                <Card variant="outlined" sx={{ textAlign: 'center', p: 2 }}>
+                  <Typography variant="body2" color="text.secondary">
+                    Total Records
+                  </Typography>
+                  <Typography variant="h5" fontWeight="bold" color="primary.main">
+                    {historyData.length}
+                  </Typography>
+                </Card>
+              </Grid>
+              <Grid item xs={12} sm={4}>
+                <Card variant="outlined" sx={{ textAlign: 'center', p: 2 }}>
+                  <Typography variant="body2" color="text.secondary">
+                    Total Amount
+                  </Typography>
+                  <Typography variant="h5" fontWeight="bold" color="success.main">
+                    {currency(historyData.reduce((sum, item) => sum + (item.amount || 0), 0))}
+                  </Typography>
+                </Card>
+              </Grid>
+              {tab === 'maintenance' && (
+                <Grid item xs={12} sm={4}>
+                  <Card variant="outlined" sx={{ textAlign: 'center', p: 2 }}>
+                    <Typography variant="body2" color="text.secondary">
+                      Pending Amount
                     </Typography>
-                    <Chip
-                      label={entry.status || 'pending'}
-                      color={entry.status === 'paid' ? 'success' : 'warning'}
-                      size="small"
-                    />
-                  </Stack>
-                </ListItem>
-              ))}
-            </List>
-          ) : (
-            <Typography variant="body2" color="text.secondary">
-              Assign a tenant to begin tracking payments for this shop.
-            </Typography>
+                    <Typography variant="h5" fontWeight="bold" color="warning.main">
+                      {currency(historyData.filter(item => item.status === 'pending').reduce((sum, item) => sum + (item.amount || 0), 0))}
+                    </Typography>
+                  </Card>
+                </Grid>
+              )}
+            </Grid>
+          )}
+
+          {/* History Content */}
+          {renderHistoryContent()}
+
+          {/* Add Test Data Button - Development Only */}
+          {process.env.NODE_ENV === 'development' && historyData.length === 0 && tenant && (
+            <Box sx={{ textAlign: 'center', mt: 3, p: 3, bgcolor: 'grey.50', borderRadius: 2 }}>
+              <Typography variant="body2" color="text.secondary" gutterBottom>
+                No {tab} data found. Would you like to add some test data?
+              </Typography>
+              <Button
+                variant="outlined"
+                size="small"
+                onClick={() => createTestData(tab)}
+                sx={{ mt: 1 }}
+              >
+                Add Test {tab && typeof tab === 'string' ? tab.charAt(0).toUpperCase() + tab.slice(1) : 'Data'} Data
+              </Button>
+            </Box>
           )}
         </CardContent>
       </Card>

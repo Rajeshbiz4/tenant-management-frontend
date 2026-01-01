@@ -268,7 +268,8 @@ export function StatusChip({ status, colorMap, ...props }) {
       return colorMap[status];
     }
     
-    switch (status?.toLowerCase()) {
+    const statusStr = status?.toString()?.toLowerCase() || '';
+    switch (statusStr) {
       case 'paid':
       case 'active':
       case 'completed':
@@ -285,9 +286,12 @@ export function StatusChip({ status, colorMap, ...props }) {
     }
   };
 
+  // Ensure status is a string and handle null/undefined values
+  const displayStatus = status && typeof status === 'string' ? status : (status?.toString() || 'Unknown');
+
   return (
     <Chip
-      label={status}
+      label={displayStatus}
       color={getColor(status)}
       size="small"
       sx={{
