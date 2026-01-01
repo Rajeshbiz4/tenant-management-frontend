@@ -16,6 +16,15 @@ import {
   TableRow,
   Chip,
   Divider,
+  Paper,
+  Grid,
+  LinearProgress,
+  InputAdornment,
+  Collapse,
+  Button,
+  Avatar,
+  Alert,
+  Fade
 } from '@mui/material';
 import {
   TrendingUp as TrendingUpIcon,
@@ -24,6 +33,12 @@ import {
   Build as BuildIcon,
   PendingActions as PendingIcon,
   AttachMoney as MoneyIcon,
+  FilterList as FilterIcon,
+  Clear as ClearIcon,
+  CalendarToday as CalendarIcon,
+  Assessment as AssessmentIcon,
+  Analytics as AnalyticsIcon,
+  Refresh as RefreshIcon
 } from '@mui/icons-material';
 import { fetchAnalytics } from '../../store/slices/statsSlice';
 import { fetchProperties } from '../../store/slices/propertySlice';
@@ -46,19 +61,13 @@ function Analytics() {
   const { properties } = useSelector((state) => state.property);
 
   const currentDate = new Date();
-  const [selectedYear, setSelectedYear] = useState(currentDate.getFullYear());
-  const [selectedMonth, setSelectedMonth] = useState(currentDate.getMonth() + 1);
+  const [selectedYear, setSelectedYear] = useState(''); // Empty for all-time data
+  const [selectedMonth, setSelectedMonth] = useState(''); // Empty for all-time data
   const [selectedProperty, setSelectedProperty] = useState('');
+  const [showFilters, setShowFilters] = useState(false);
 
   useEffect(() => {
     dispatch(fetchProperties({ page: 1, limit: 100 }));
-    
-    // Debug authentication
-    const token = localStorage.getItem('token');
-    console.log('Analytics: Auth token exists:', !!token);
-    if (!token) {
-      console.error('Analytics: No auth token found');
-    }
   }, [dispatch]);
 
   useEffect(() => {
@@ -67,7 +76,6 @@ function Analytics() {
     if (selectedMonth) filters.month = selectedMonth;
     if (selectedProperty) filters.propertyId = selectedProperty;
     
-    console.log('Analytics: Fetching with filters:', filters);
     dispatch(fetchAnalytics(filters));
   }, [dispatch, selectedYear, selectedMonth, selectedProperty]);
 
@@ -112,15 +120,6 @@ function Analytics() {
   const netAmount = analytics?.netAmount || 0;
   const profitMargin = analytics?.profitMargin || 0;
 
-  console.log('Analytics: Current state:', { 
-    loading, 
-    error, 
-    analytics, 
-    earnings, 
-    spends, 
-    pendingRent 
-  });
-
   const summaryCards = [
     {
       title: 'Total Earnings',
@@ -158,150 +157,348 @@ function Analytics() {
 
   return (
     <ResponsivePageLayout>
-      {/* Header with Filters */}
+      {/* Enhanced Header with Financial Overview */}
       <ResponsiveSection>
-        <Card>
-          <CardContent>
-            <Typography variant="h5" gutterBottom>
-              Financial Analytics
-            </Typography>
-            {error && (
-              <Typography variant="body2" color="error" gutterBottom>
-                Error: {error}
+        <Paper
+          elevation={0}
+          sx={{
+            background: 'linear-gradient(135deg, #2e7d32 0%, #1b5e20 100%)',
+            color: 'white',
+            borderRadius: 3,
+            p: { xs: 3, sm: 4 },
+          }}
+        >
+          <Stack 
+            direction={{ xs: 'column', sm: 'row' }} 
+            alignItems={{ xs: 'flex-start', sm: 'center' }} 
+            spacing={3}
+          >
+            <Box sx={{ flex: 1 }}>
+              <Typography variant={{ xs: 'h5', sm: 'h4' }} fontWeight="bold" gutterBottom>
+                Financial Analytics
               </Typography>
-            )}
-            <Typography variant="body2" color="text.secondary" gutterBottom>
-              {analytics?.period?.monthName || monthNames[selectedMonth - 1]} {analytics?.period?.year || selectedYear}
-            </Typography>
-            {!analytics && (
-              <Typography variant="body2" color="warning.main" gutterBottom>
-                No analytics data available. This could mean:
-                <br />• No payment or maintenance records exist
-                <br />• Backend server connection issue
-                <br />• Authentication problem
+              <Typography variant="body1" sx={{ opacity: 0.9, mb: 2 }}>
+                Comprehensive financial insights and performance analytics for {
+                  selectedYear && selectedMonth 
+                    ? `${monthNames[selectedMonth - 1]} ${selectedYear}`
+                    : selectedYear 
+                    ? `Year ${selectedYear}`
+                    : selectedMonth
+                    ? `${monthNames[selectedMonth - 1]} (All Years)`
+                    : 'All Time'
+                }
               </Typography>
-            )}
-            <ResponsiveFilters>
-              <TextField
-                select
-                label="Year"
-                value={selectedYear}
-                onChange={(e) => setSelectedYear(e.target.value)}
-                sx={{ minWidth: 150 }}
-              >
-                {Array.from({ length: 5 }, (_, i) => currentDate.getFullYear() - i).map((year) => (
-                  <MenuItem key={year} value={year}>
-                    {year}
-                  </MenuItem>
-                ))}
-              </TextField>
-              <TextField
-                select
-                label="Month"
-                value={selectedMonth}
-                onChange={(e) => setSelectedMonth(e.target.value)}
-                sx={{ minWidth: 200 }}
-              >
-                {monthNames.map((month, index) => (
-                  <MenuItem key={month} value={index + 1}>
-                    {month}
-                  </MenuItem>
-                ))}
-              </TextField>
-              <TextField
-                select
-                label="Property (Optional)"
-                value={selectedProperty}
-                onChange={(e) => setSelectedProperty(e.target.value)}
-                sx={{ minWidth: 250 }}
-              >
-                <MenuItem value="">All Properties</MenuItem>
-                {properties.map((property) => (
-                  <MenuItem key={property._id} value={property._id}>
-                    {property.shopName} - {property.shopNumber}
-                  </MenuItem>
-                ))}
-              </TextField>
-            </ResponsiveFilters>
-          </CardContent>
-        </Card>
+              
+              {/* Quick Financial Stats */}
+              <Grid container spacing={2}>
+                <Grid item xs={6} sm={3}>
+                  <Box textAlign="center">
+                    <Typography variant="h4" fontWeight="bold">{currency(earnings.total)}</Typography>
+                    <Typography variant="body2" sx={{ opacity: 0.8 }}>Total Earnings</Typography>
+                  </Box>
+                </Grid>
+                <Grid item xs={6} sm={3}>
+                  <Box textAlign="center">
+                    <Typography variant="h4" fontWeight="bold" color="error.light">{currency(spends.total)}</Typography>
+                    <Typography variant="body2" sx={{ opacity: 0.8 }}>Total Expenses</Typography>
+                  </Box>
+                </Grid>
+                <Grid item xs={6} sm={3}>
+                  <Box textAlign="center">
+                    <Typography variant="h4" fontWeight="bold" color={netAmount >= 0 ? 'success.light' : 'error.light'}>
+                      {currency(netAmount)}
+                    </Typography>
+                    <Typography variant="body2" sx={{ opacity: 0.8 }}>Net Profit</Typography>
+                  </Box>
+                </Grid>
+                <Grid item xs={6} sm={3}>
+                  <Box textAlign="center">
+                    <Typography variant="h4" fontWeight="bold" color="warning.light">{profitMargin}%</Typography>
+                    <Typography variant="body2" sx={{ opacity: 0.8 }}>Profit Margin</Typography>
+                  </Box>
+                </Grid>
+              </Grid>
+
+              {/* Progress Indicators */}
+              <Grid container spacing={2} sx={{ mt: 2 }}>
+                <Grid item xs={12} sm={6}>
+                  <Stack direction="row" justifyContent="space-between" alignItems="center" mb={1}>
+                    <Typography variant="body2" sx={{ opacity: 0.9 }}>
+                      Collection Efficiency
+                    </Typography>
+                    <Typography variant="body2" fontWeight="bold">
+                      {spends.total > 0 ? Math.round((spends.paid / spends.total) * 100) : 100}%
+                    </Typography>
+                  </Stack>
+                  <LinearProgress
+                    variant="determinate"
+                    value={spends.total > 0 ? Math.round((spends.paid / spends.total) * 100) : 100}
+                    sx={{
+                      height: 8,
+                      borderRadius: 4,
+                      bgcolor: 'rgba(255, 255, 255, 0.2)',
+                      '& .MuiLinearProgress-bar': {
+                        bgcolor: 'success.light',
+                        borderRadius: 4,
+                      },
+                    }}
+                  />
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <Stack direction="row" justifyContent="space-between" alignItems="center" mb={1}>
+                    <Typography variant="body2" sx={{ opacity: 0.9 }}>
+                      Revenue Streams
+                    </Typography>
+                    <Typography variant="body2" fontWeight="bold">
+                      {earnings.count} Transactions
+                    </Typography>
+                  </Stack>
+                  <LinearProgress
+                    variant="determinate"
+                    value={100}
+                    sx={{
+                      height: 8,
+                      borderRadius: 4,
+                      bgcolor: 'rgba(255, 255, 255, 0.2)',
+                      '& .MuiLinearProgress-bar': {
+                        bgcolor: 'info.light',
+                        borderRadius: 4,
+                      },
+                    }}
+                  />
+                </Grid>
+              </Grid>
+            </Box>
+            
+            <Button
+              variant="contained"
+              size="large"
+              startIcon={<RefreshIcon />}
+              onClick={() => {
+                const filters = {};
+                if (selectedYear) filters.year = selectedYear;
+                if (selectedMonth) filters.month = selectedMonth;
+                if (selectedProperty) filters.propertyId = selectedProperty;
+                dispatch(fetchAnalytics(filters));
+              }}
+              sx={{
+                bgcolor: 'rgba(255, 255, 255, 0.2)',
+                color: 'white',
+                px: 4,
+                py: 1.5,
+                fontSize: '1.1rem',
+                '&:hover': {
+                  bgcolor: 'rgba(255, 255, 255, 0.3)',
+                },
+              }}
+            >
+              Refresh Data
+            </Button>
+          </Stack>
+        </Paper>
       </ResponsiveSection>
 
-      {/* Summary Cards */}
+      {/* Enhanced Filters */}
+      <ResponsiveSection>
+        <Paper elevation={0} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
+          <Box sx={{ p: 3 }}>
+            <Stack direction="row" alignItems="center" justifyContent="space-between" mb={2}>
+              <Typography variant="h6" fontWeight="bold">
+                Analytics Filters & Controls
+              </Typography>
+            </Stack>
+
+            {/* Basic filters */}
+            <Grid container spacing={2}>
+              <Grid item xs={12} sm={4}>
+                <TextField
+                  select
+                  fullWidth
+                  label="Year"
+                  value={selectedYear}
+                  onChange={(e) => setSelectedYear(e.target.value)}
+                  InputProps={{
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <CalendarIcon />
+                      </InputAdornment>
+                    ),
+                  }}
+                >
+                  <MenuItem value="">All Years</MenuItem>
+                  {Array.from({ length: 5 }, (_, i) => currentDate.getFullYear() - i).map((year) => (
+                    <MenuItem key={year} value={year}>
+                      {year}
+                    </MenuItem>
+                  ))}
+                </TextField>
+              </Grid>
+              <Grid item xs={12} sm={4}>
+                <TextField
+                  select
+                  fullWidth
+                  label="Month"
+                  value={selectedMonth}
+                  onChange={(e) => setSelectedMonth(e.target.value)}
+                  InputProps={{
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <CalendarIcon />
+                      </InputAdornment>
+                    ),
+                  }}
+                >
+                  <MenuItem value="">All Months</MenuItem>
+                  {monthNames.map((month, index) => (
+                    <MenuItem key={month} value={index + 1}>
+                      {month}
+                    </MenuItem>
+                  ))}
+                </TextField>
+              </Grid>
+              <Grid item xs={12} sm={4}>
+                <TextField
+                  select
+                  fullWidth
+                  label="Property (Optional)"
+                  value={selectedProperty}
+                  onChange={(e) => setSelectedProperty(e.target.value)}
+                >
+                  <MenuItem value="">All Properties</MenuItem>
+                  {properties.map((property) => (
+                    <MenuItem key={property._id} value={property._id}>
+                      {property.shopName} - {property.shopNumber}
+                    </MenuItem>
+                  ))}
+                </TextField>
+              </Grid>
+            </Grid>
+
+            {/* Status Messages */}
+            {error && (
+              <Alert severity="error" sx={{ mt: 2 }}>
+                <Typography variant="body2" fontWeight="bold">Error Loading Analytics</Typography>
+                <Typography variant="body2">{error}</Typography>
+              </Alert>
+            )}
+          </Box>
+        </Paper>
+      </ResponsiveSection>
+
+      {/* Enhanced Summary Cards */}
       <ResponsiveSection>
         <ResponsiveStatsGrid>
-          {summaryCards.map((card) => (
-            <Card key={card.title} sx={{ bgcolor: card.color, color: '#fff', height: '100%' }}>
-              <CardContent>
-                <Stack direction="row" spacing={2} alignItems="center">
-                  <Box
-                    sx={{
-                      bgcolor: 'rgba(255,255,255,0.3)',
-                      borderRadius: '50%',
-                      p: 1.5,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                    }}
-                  >
-                    {card.icon}
-                  </Box>
-                  <Box flex={1}>
-                    <Typography variant="body2" sx={{ opacity: 0.9 }}>
-                      {card.title}
-                    </Typography>
-                    <Typography variant="h5" fontWeight="bold">
-                      {card.value}
-                    </Typography>
-                    <Typography variant="caption" sx={{ opacity: 0.8 }}>
-                      {card.helper}
-                    </Typography>
-                  </Box>
-                </Stack>
-              </CardContent>
-            </Card>
+          {summaryCards.map((card, index) => (
+            <Fade in timeout={500 + index * 200} key={card.title}>
+              <Card 
+                sx={{
+                  height: '100%',
+                  background: `linear-gradient(135deg, ${card.color} 0%, ${card.color}CC 100%)`,
+                  color: '#fff',
+                  borderRadius: 3,
+                  transition: 'all 0.3s ease',
+                  '&:hover': {
+                    transform: 'translateY(-4px)',
+                    boxShadow: '0 12px 24px rgba(0,0,0,0.15)',
+                  },
+                }}
+              >
+                <CardContent>
+                  <Stack direction="row" spacing={2} alignItems="center">
+                    <Box
+                      sx={{
+                        bgcolor: 'rgba(255,255,255,0.3)',
+                        borderRadius: '50%',
+                        p: 1.5,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                    >
+                      {card.icon}
+                    </Box>
+                    <Box flex={1}>
+                      <Typography variant="body2" sx={{ opacity: 0.9 }}>
+                        {card.title}
+                      </Typography>
+                      <Typography variant="h5" fontWeight="bold">
+                        {card.value}
+                      </Typography>
+                      <Typography variant="caption" sx={{ opacity: 0.8 }}>
+                        {card.helper}
+                      </Typography>
+                    </Box>
+                  </Stack>
+                </CardContent>
+              </Card>
+            </Fade>
           ))}
         </ResponsiveStatsGrid>
       </ResponsiveSection>
 
-      {/* Detailed Breakdown */}
+      {/* Enhanced Detailed Breakdown */}
       <ResponsiveSection>
         <ResponsiveTwoColumn
           left={
-            <Card sx={{ height: '100%' }}>
-              <CardContent>
-                <Stack direction="row" spacing={1} alignItems="center" mb={2}>
-                  <TrendingUpIcon color="success" />
-                  <Typography variant="h6">Earnings Breakdown</Typography>
+            <Card sx={{ height: '100%', borderRadius: 3, border: '1px solid', borderColor: 'divider' }}>
+              <CardContent sx={{ p: 3 }}>
+                <Stack direction="row" spacing={1} alignItems="center" mb={3}>
+                  <Avatar sx={{ bgcolor: 'success.light' }}>
+                    <TrendingUpIcon />
+                  </Avatar>
+                  <Box>
+                    <Typography variant="h6" fontWeight="bold">Earnings Breakdown</Typography>
+                    <Typography variant="body2" color="text.secondary">Revenue by category</Typography>
+                  </Box>
                 </Stack>
-                <Divider sx={{ mb: 2 }} />
-                <Stack spacing={2}>
+                <Divider sx={{ mb: 3 }} />
+                <Stack spacing={3}>
                   <Box display="flex" justifyContent="space-between" alignItems="center">
-                    <Typography variant="body1">Rent</Typography>
-                    <Typography variant="h6" color="success.main">
+                    <Stack direction="row" alignItems="center" spacing={2}>
+                      <Avatar sx={{ bgcolor: 'primary.light', width: 32, height: 32 }}>
+                        <MoneyIcon fontSize="small" />
+                      </Avatar>
+                      <Typography variant="body1" fontWeight="medium">Rent</Typography>
+                    </Stack>
+                    <Typography variant="h6" color="success.main" fontWeight="bold">
                       {currency(earnings.byType?.rent || 0)}
                     </Typography>
                   </Box>
                   <Box display="flex" justifyContent="space-between" alignItems="center">
-                    <Typography variant="body1">Maintenance</Typography>
-                    <Typography variant="h6" color="success.main">
+                    <Stack direction="row" alignItems="center" spacing={2}>
+                      <Avatar sx={{ bgcolor: 'warning.light', width: 32, height: 32 }}>
+                        <BuildIcon fontSize="small" />
+                      </Avatar>
+                      <Typography variant="body1" fontWeight="medium">Maintenance</Typography>
+                    </Stack>
+                    <Typography variant="h6" color="success.main" fontWeight="bold">
                       {currency(earnings.byType?.maintenance || 0)}
                     </Typography>
                   </Box>
                   <Box display="flex" justifyContent="space-between" alignItems="center">
-                    <Typography variant="body1">Light Bill</Typography>
-                    <Typography variant="h6" color="success.main">
+                    <Stack direction="row" alignItems="center" spacing={2}>
+                      <Avatar sx={{ bgcolor: 'info.light', width: 32, height: 32 }}>
+                        <WalletIcon fontSize="small" />
+                      </Avatar>
+                      <Typography variant="body1" fontWeight="medium">Light Bill</Typography>
+                    </Stack>
+                    <Typography variant="h6" color="success.main" fontWeight="bold">
                       {currency(earnings.byType?.light || 0)}
                     </Typography>
                   </Box>
                   <Box display="flex" justifyContent="space-between" alignItems="center">
-                    <Typography variant="body1">Advance</Typography>
-                    <Typography variant="h6" color="success.main">
+                    <Stack direction="row" alignItems="center" spacing={2}>
+                      <Avatar sx={{ bgcolor: 'secondary.light', width: 32, height: 32 }}>
+                        <TrendingUpIcon fontSize="small" />
+                      </Avatar>
+                      <Typography variant="body1" fontWeight="medium">Advance</Typography>
+                    </Stack>
+                    <Typography variant="h6" color="success.main" fontWeight="bold">
                       {currency(earnings.byType?.advance || 0)}
                     </Typography>
                   </Box>
                   <Divider />
-                  <Box display="flex" justifyContent="space-between" alignItems="center">
+                  <Box display="flex" justifyContent="space-between" alignItems="center" sx={{ bgcolor: 'success.50', p: 2, borderRadius: 2 }}>
                     <Typography variant="h6" fontWeight="bold">
                       Total Earnings
                     </Typography>
@@ -314,33 +511,61 @@ function Analytics() {
             </Card>
           }
           right={
-            <Card sx={{ height: '100%' }}>
-              <CardContent>
-                <Stack direction="row" spacing={1} alignItems="center" mb={2}>
-                  <BuildIcon color="error" />
-                  <Typography variant="h6">Spends Breakdown</Typography>
+            <Card sx={{ height: '100%', borderRadius: 3, border: '1px solid', borderColor: 'divider' }}>
+              <CardContent sx={{ p: 3 }}>
+                <Stack direction="row" spacing={1} alignItems="center" mb={3}>
+                  <Avatar sx={{ bgcolor: 'error.light' }}>
+                    <BuildIcon />
+                  </Avatar>
+                  <Box>
+                    <Typography variant="h6" fontWeight="bold">Expenses Breakdown</Typography>
+                    <Typography variant="body2" color="text.secondary">Maintenance costs analysis</Typography>
+                  </Box>
                 </Stack>
-                <Divider sx={{ mb: 2 }} />
-                <Stack spacing={2}>
+                <Divider sx={{ mb: 3 }} />
+                <Stack spacing={3}>
                   <Box display="flex" justifyContent="space-between" alignItems="center">
-                    <Typography variant="body1">Paid</Typography>
-                    <Typography variant="h6" color="success.main">
+                    <Stack direction="row" alignItems="center" spacing={2}>
+                      <Avatar sx={{ bgcolor: 'success.light', width: 32, height: 32 }}>
+                        <TrendingUpIcon fontSize="small" />
+                      </Avatar>
+                      <Typography variant="body1" fontWeight="medium">Paid</Typography>
+                    </Stack>
+                    <Typography variant="h6" color="success.main" fontWeight="bold">
                       {currency(spends.paid || 0)}
                     </Typography>
                   </Box>
                   <Box display="flex" justifyContent="space-between" alignItems="center">
-                    <Typography variant="body1">Pending</Typography>
-                    <Typography variant="h6" color="warning.main">
+                    <Stack direction="row" alignItems="center" spacing={2}>
+                      <Avatar sx={{ bgcolor: 'warning.light', width: 32, height: 32 }}>
+                        <PendingIcon fontSize="small" />
+                      </Avatar>
+                      <Typography variant="body1" fontWeight="medium">Pending</Typography>
+                    </Stack>
+                    <Typography variant="h6" color="warning.main" fontWeight="bold">
                       {currency(spends.pending || 0)}
                     </Typography>
                   </Box>
                   <Divider />
-                  <Box display="flex" justifyContent="space-between" alignItems="center">
+                  <Box display="flex" justifyContent="space-between" alignItems="center" sx={{ bgcolor: 'error.50', p: 2, borderRadius: 2 }}>
                     <Typography variant="h6" fontWeight="bold">
-                      Total Spends
+                      Total Expenses
                     </Typography>
                     <Typography variant="h5" fontWeight="bold" color="error.main">
                       {currency(spends.total)}
+                    </Typography>
+                  </Box>
+                  
+                  {/* Net Profit Summary */}
+                  <Box sx={{ mt: 3, p: 2, bgcolor: netAmount >= 0 ? 'success.50' : 'error.50', borderRadius: 2 }}>
+                    <Typography variant="body2" color="text.secondary" gutterBottom>
+                      Net Profit This Period
+                    </Typography>
+                    <Typography variant="h4" fontWeight="bold" color={netAmount >= 0 ? 'success.main' : 'error.main'}>
+                      {currency(netAmount)}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      {profitMargin}% profit margin
                     </Typography>
                   </Box>
                 </Stack>
@@ -350,52 +575,98 @@ function Analytics() {
         />
       </ResponsiveSection>
 
-      {/* Pending Rent Details */}
+      {/* Enhanced Pending Rent Details */}
       {pendingRent.details && pendingRent.details.length > 0 && (
         <ResponsiveSection>
-          <Card>
-            <CardContent>
-              <Stack direction="row" spacing={1} alignItems="center" mb={2}>
-                <PendingIcon color="warning" />
-                <Typography variant="h6">Pending Rent Details</Typography>
+          <Card sx={{ borderRadius: 3, border: '1px solid', borderColor: 'divider' }}>
+            <CardContent sx={{ p: 3 }}>
+              <Stack direction="row" spacing={1} alignItems="center" mb={3}>
+                <Avatar sx={{ bgcolor: 'warning.light' }}>
+                  <PendingIcon />
+                </Avatar>
+                <Box>
+                  <Typography variant="h6" fontWeight="bold">Pending Rent Collections</Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    {pendingRent.details.length} properties with pending payments
+                  </Typography>
+                </Box>
               </Stack>
-              <Divider sx={{ mb: 2 }} />
-              <Table size="small">
-                <TableHead>
-                  <TableRow>
-                    <TableCell>Property</TableCell>
-                    <TableCell>Property Number</TableCell>
-                    <TableCell>Tenant</TableCell>
-                    <TableCell align="right">Amount</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {pendingRent.details.map((detail, index) => (
-                    <TableRow key={index}>
-                      <TableCell>{detail.property}</TableCell>
-                      <TableCell>{detail.propertyNumber}</TableCell>
-                      <TableCell>{detail.tenant}</TableCell>
-                      <TableCell align="right">
-                        <Typography variant="body1" fontWeight="bold" color="warning.main">
-                          {currency(detail.amount)}
+              <Divider sx={{ mb: 3 }} />
+              
+              <Box sx={{ overflowX: 'auto' }}>
+                <Table size="small" sx={{ minWidth: 650 }}>
+                  <TableHead>
+                    <TableRow sx={{ bgcolor: 'grey.50' }}>
+                      <TableCell sx={{ fontWeight: 600 }}>Property</TableCell>
+                      <TableCell sx={{ fontWeight: 600 }}>Property Number</TableCell>
+                      <TableCell sx={{ fontWeight: 600 }}>Tenant</TableCell>
+                      <TableCell align="right" sx={{ fontWeight: 600 }}>Amount</TableCell>
+                      <TableCell sx={{ fontWeight: 600 }}>Status</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {pendingRent.details.map((detail, index) => (
+                      <TableRow key={index} hover>
+                        <TableCell>
+                          <Typography variant="body2" fontWeight="medium">
+                            {detail.property}
+                          </Typography>
+                        </TableCell>
+                        <TableCell>
+                          <Chip 
+                            label={detail.propertyNumber} 
+                            size="small" 
+                            variant="outlined" 
+                            color="primary"
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <Stack direction="row" alignItems="center" spacing={1}>
+                            <Avatar sx={{ width: 24, height: 24, bgcolor: 'primary.light' }}>
+                              <Typography variant="caption">
+                                {detail.tenant?.charAt(0)?.toUpperCase()}
+                              </Typography>
+                            </Avatar>
+                            <Typography variant="body2">{detail.tenant}</Typography>
+                          </Stack>
+                        </TableCell>
+                        <TableCell align="right">
+                          <Typography variant="body1" fontWeight="bold" color="warning.main">
+                            {currency(detail.amount)}
+                          </Typography>
+                        </TableCell>
+                        <TableCell>
+                          <Chip 
+                            label="Pending" 
+                            color="warning" 
+                            size="small"
+                            icon={<PendingIcon />}
+                          />
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                    <TableRow sx={{ bgcolor: 'warning.50' }}>
+                      <TableCell colSpan={3} align="right">
+                        <Typography variant="h6" fontWeight="bold">
+                          Total Pending Collections:
                         </Typography>
                       </TableCell>
+                      <TableCell align="right">
+                        <Typography variant="h5" fontWeight="bold" color="warning.dark">
+                          {currency(pendingRent.total)}
+                        </Typography>
+                      </TableCell>
+                      <TableCell>
+                        <Chip 
+                          label={`${pendingRent.details.length} Properties`} 
+                          color="warning" 
+                          variant="filled"
+                        />
+                      </TableCell>
                     </TableRow>
-                  ))}
-                  <TableRow sx={{ bgcolor: 'warning.light' }}>
-                    <TableCell colSpan={3} align="right">
-                      <Typography variant="h6" fontWeight="bold">
-                        Total Pending:
-                      </Typography>
-                    </TableCell>
-                    <TableCell align="right">
-                      <Typography variant="h6" fontWeight="bold" color="warning.dark">
-                        {currency(pendingRent.total)}
-                      </Typography>
-                    </TableCell>
-                  </TableRow>
-                </TableBody>
-              </Table>
+                  </TableBody>
+                </Table>
+              </Box>
             </CardContent>
           </Card>
         </ResponsiveSection>

@@ -1,7 +1,7 @@
 import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useSelector } from 'react-redux';
-import Layout from './components/Layout/Layout';
+import AdminLayout from './components/Layout/AdminLayout';
 import Login from './pages/Auth/Login';
 import Register from './pages/Auth/Register';
 import ForgotPassword from './pages/Auth/ForgotPassword';
@@ -33,7 +33,7 @@ function App() {
         path="/*"
         element={
           <PrivateRoute>
-            <Layout>
+            <AdminLayout>
               <Routes>
                 <Route path="/" element={<Dashboard />} />
                 <Route path="/properties" element={<Properties />} />
@@ -47,7 +47,7 @@ function App() {
                 <Route path="/profile" element={<Profile />} />
                 <Route path="*" element={<Navigate to="/" />} />
               </Routes>
-            </Layout>
+            </AdminLayout>
           </PrivateRoute>
         }
       />
